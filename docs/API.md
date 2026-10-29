@@ -103,7 +103,7 @@ The replay table is `parmana_connectors_nonces`. Each row keeps its key and `exp
 }
 ```
 
-Only the error code leaves the service. For a failure that is not a connector error, the text is `connector failed`. The detail is not logged either (see [Logs](#logs)). The release stays recorded, so it cannot be sent again. Check the business system before doing anything else. [RUNBOOK.md](../RUNBOOK.md) describes how.
+Only the error code leaves the service. For a failure that is not a connector error, the text is `connector failed`. The connector's own message is written to the log, not returned (see [Logs](#logs)). The release stays recorded, so it cannot be sent again. Check the business system before doing anything else. [RUNBOOK.md](../RUNBOOK.md) describes how.
 
 If the connector's answer is larger than 16 KB, the service returns `200` with `success: false` and `result` set to `{"error":"result is larger than 16 KB"}`.
 
@@ -151,12 +151,12 @@ The limit is 256 KB.
 | Clock skew allowed on expiry | 30 seconds | Local service and Vercel |
 | Request headers | 10 seconds | Local service only (`server.headersTimeout`) |
 | Whole request | 30 seconds | Local service only (`server.requestTimeout`) |
-| Connector call | `PARMANA_CONNECTOR_TIMEOUT_MS`, default 10 s | Generic connector. The Razorpay connector uses its own fixed limit, see [RAZORPAY.md](RAZORPAY.md) |
+| Connector call | `PARMANA_CONNECTOR_TIMEOUT_MS`, default 10 s | The generic connector applies it to each upstream call. The Razorpay connector applies it to all of its calls for one release together, see [RAZORPAY.md](RAZORPAY.md) |
 | Shutdown | 25 seconds for in-flight requests | Local service only |
 
 ## Logs
 
-The service writes one JSON line per event to stdout. Each line has `time` and `event`, plus the fields below. No line contains a credential, a request body, or an upstream response.
+The service writes one JSON line per event to stdout. Each line has `time` and `event`, plus the fields below. No line contains a credential or a request body. The one line that carries connector text is `connector_failed`, whose `detail` is the connector's own message, capped at 300 characters. Connectors are written so that the message never holds a credential or a response body.
 
 | Event | Fields | When |
 | --- | --- | --- |
@@ -164,7 +164,7 @@ The service writes one JSON line per event to stdout. Each line has `time` and `
 | `nonce_store_memory` | `warning` | `PARMANA_NONCE_STORE=memory` is in use |
 | `release_refused` | `reasons` (a count) | A check refused the release |
 | `release_answered` | `businessTransactionId`, `capability`, `success` | The connector ran (or failed) and the answer was sent |
-| `connector_failed` | `businessTransactionId`, `capability`, `code` | The connector threw. `code` is its error code, or `unknown` |
+| `connector_failed` | `businessTransactionId`, `capability`, `code`, `detail` | The connector threw. `code` is its error code, or `unknown`. `detail` is its message, or `none` |
 | `release_check_unavailable` | none | The replay store failed. The release was not run |
 | `unhandled_error` | none | An unexpected error in the local service. It returns `500` |
 | `service_not_configured` | `reason` (names the setting, never its value) | Vercel: a setting is missing or invalid |
@@ -172,4 +172,4 @@ The service writes one JSON line per event to stdout. Each line has `time` and `
 | `shutdown_forced` | none | In-flight requests did not finish within 25 seconds, and the process exited |
 | `shutdown_complete` | none | Clean exit after shutdown |
 
-The Razorpay error description is not logged. The log has the error code only (for example `upstream_error`). Use Razorpay's own dashboard to see why a refund was refused.
+For Razorpay, the `detail` carries Razorpay's error code and description, for example `Razorpay refused creating the refund (HTTP 400, code BAD_REQUEST_ERROR: ...)`. A failed refund call that may have created a refund says so, and names the receipt to check in Razorpay.

@@ -15,8 +15,21 @@ interface Recorded {
   body: unknown;
 }
 
-/** A fake Razorpay. `existing` are the refunds already on the payment; `refundStatus` is what POST /refund answers. */
-function fakeRazorpay(options: { existing?: Array<Record<string, unknown>>; refundStatus?: number; refundBody?: unknown } = {}) {
+/**
+ * A fake Razorpay. `existing` are the refunds already on the payment, paged by
+ * `count` and `skip` as Razorpay does. `refundStatus` is what POST /refund answers.
+ * `listBody` replaces the list answer, for a malformed one.
+ */
+function fakeRazorpay(
+  options: {
+    existing?: Array<Record<string, unknown>>;
+    refundStatus?: number;
+    refundBody?: unknown;
+    listBody?: unknown;
+    /** Holds every call until the caller's signal aborts, to simulate a slow upstream. */
+    hang?: boolean;
+  } = {},
+) {
   const calls: Recorded[] = [];
   const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
@@ -28,8 +41,18 @@ function fakeRazorpay(options: { existing?: Array<Record<string, unknown>>; refu
       auth: headers.get("authorization"),
       body: init?.body === undefined || init.body === null ? undefined : JSON.parse(String(init.body)),
     });
+    if (options.hang) {
+      await new Promise((_, reject) => {
+        init?.signal?.addEventListener("abort", () => reject(Object.assign(new Error("aborted"), { name: "TimeoutError" })));
+      });
+    }
     if (method === "GET") {
-      return Response.json({ entity: "collection", items: options.existing ?? [] });
+      if (options.listBody !== undefined) return Response.json(options.listBody);
+      const query = new URL(url).searchParams;
+      const count = Number(query.get("count") ?? "10");
+      const skip = Number(query.get("skip") ?? "0");
+      const page = (options.existing ?? []).slice(skip, skip + count);
+      return Response.json({ entity: "collection", count: page.length, items: page });
     }
     const status = options.refundStatus ?? 200;
     if (status !== 200) {
@@ -147,7 +170,7 @@ describe("createRazorpayConnector", () => {
     expect((error as Error).message).not.toContain("secretvalue");
   });
 
-  it("reports a network failure as unknown, and says to resend the same release", async () => {
+  it("says no refund was created when the list call fails, since no refund call was made", async () => {
     const failing = (async () => {
       throw new TypeError("fetch failed");
     }) as typeof fetch;
@@ -156,6 +179,77 @@ describe("createRazorpayConnector", () => {
       .catch((err: unknown) => err);
 
     expect((error as ConnectorError).code).toBe("upstream_error");
-    expect((error as Error).message).toContain("resend the same release");
+    expect((error as Error).message).toContain("No refund was created");
+    expect((error as Error).message).not.toContain("resend");
+  });
+
+  it("tells the operator to check Razorpay for the receipt when the refund call fails after it was sent", async () => {
+    const razorpay = fakeRazorpay();
+    const failingPost = (async (input: string | URL | Request, init?: RequestInit) => {
+      if (init?.method === "POST") throw new TypeError("fetch failed");
+      return razorpay.fetch(input, init);
+    }) as typeof fetch;
+    const error = await createRazorpayConnector({ fetch: failingPost })
+      .execute(request(), context())
+      .catch((err: unknown) => err);
+
+    expect((error as ConnectorError).code).toBe("upstream_error");
+    expect((error as Error).message).toContain(`check Razorpay for a refund with receipt ${TRANSACTION}`);
+    expect((error as Error).message).not.toContain("resend");
+  });
+
+  it("finds an earlier refund on a later page without refunding again", async () => {
+    const filler = Array.from({ length: 100 }, (_, i) => ({ id: `rfnd_F${i}`, amount: 1, status: "processed", payment_id: PAYMENT, receipt: `other-${i}` }));
+    const razorpay = fakeRazorpay({
+      existing: [...filler, { id: "rfnd_LATE", amount: 100, status: "processed", payment_id: PAYMENT, receipt: TRANSACTION }],
+    });
+    const response = await createRazorpayConnector({ fetch: razorpay.fetch }).execute(request(), context());
+
+    expect(response.metadata.body).toMatchObject({ refundId: "rfnd_LATE", alreadyRefunded: true });
+    expect(razorpay.calls.map((call) => call.method)).toEqual(["GET", "GET"]);
+    expect(razorpay.calls[1]?.url).toContain("skip=100");
+  });
+
+  it("creates the refund after reading a full page with no match and an empty next page", async () => {
+    const filler = Array.from({ length: 100 }, (_, i) => ({ id: `rfnd_F${i}`, amount: 1, status: "processed", payment_id: PAYMENT, receipt: `other-${i}` }));
+    const razorpay = fakeRazorpay({ existing: filler });
+    const response = await createRazorpayConnector({ fetch: razorpay.fetch }).execute(request(), context());
+
+    expect(response.metadata.body).toMatchObject({ alreadyRefunded: false });
+    expect(razorpay.calls.map((call) => call.method)).toEqual(["GET", "GET", "POST"]);
+  });
+
+  it("refuses, and makes no refund, when the payment has more refunds than it can check", async () => {
+    const filler = Array.from({ length: 1000 }, (_, i) => ({ id: `rfnd_F${i}`, amount: 1, status: "processed", payment_id: PAYMENT, receipt: `other-${i}` }));
+    const razorpay = fakeRazorpay({ existing: filler });
+    const error = await createRazorpayConnector({ fetch: razorpay.fetch })
+      .execute(request(), context())
+      .catch((err: unknown) => err);
+
+    expect((error as ConnectorError).code).toBe("upstream_error");
+    expect((error as Error).message).toContain("cannot be ruled out");
+    expect(razorpay.calls.some((call) => call.method === "POST")).toBe(false);
+  });
+
+  it("refuses a list answer without items, rather than treating it as no earlier refund", async () => {
+    const razorpay = fakeRazorpay({ listBody: { entity: "collection" } });
+    const error = await createRazorpayConnector({ fetch: razorpay.fetch })
+      .execute(request(), context())
+      .catch((err: unknown) => err);
+
+    expect((error as ConnectorError).code).toBe("upstream_error");
+    expect(razorpay.calls.some((call) => call.method === "POST")).toBe(false);
+  });
+
+  it("keeps every call inside the overall time limit the service gives", async () => {
+    const razorpay = fakeRazorpay({ hang: true });
+    const started = Date.now();
+    const error = await createRazorpayConnector({ fetch: razorpay.fetch })
+      .execute(request(), { credential: context().credential, timeoutMs: 200 })
+      .catch((err: unknown) => err);
+
+    expect((error as ConnectorError).code).toBe("timeout");
+    expect((error as Error).message).toContain("No refund was created");
+    expect(Date.now() - started).toBeLessThan(2_000);
   });
 });

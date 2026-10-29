@@ -10,6 +10,8 @@ import { isSignedExternalRelease, verifyExternalRelease, type ExternalRelease } 
 /** Largest result returned to parmana-core, in bytes. Parmana refuses anything larger. */
 const RESULT_LIMIT_BYTES = 16 * 1024;
 const DEFAULT_MAX_BODY_BYTES = 256 * 1024;
+/** Longest connector message written to the log, in characters. */
+const LOG_DETAIL_LIMIT = 300;
 
 export interface ServiceOptions {
   readonly publicKey: KeyObject;
@@ -98,11 +100,13 @@ export function createService(options: ServiceOptions) {
       result = { status: response.metadata.status, body: response.metadata.body };
     } catch (err) {
       success = false;
-      // Only the error code leaves the service. The detail stays in this log, and never includes a credential.
+      // Only the error code leaves the service. The detail stays in this log. It is the connector's own
+      // message, capped in length. Connectors never put a credential or a response body in it.
       log("connector_failed", {
         businessTransactionId: release.businessTransactionId,
         capability: release.capability,
         code: err instanceof ConnectorError ? err.code : "unknown",
+        detail: err instanceof ConnectorError ? err.message.slice(0, LOG_DETAIL_LIMIT) : "none",
       });
       result = { error: err instanceof ConnectorError ? `connector failed: ${err.code}` : "connector failed" };
     }

@@ -10,7 +10,7 @@ Parmana core decides whether an action may run and records the decision. This re
 | --- | --- |
 | Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built, tested, and running on Vercel production at `https://parmana-connectors.vercel.app` |
 | Razorpay connector (`razorpay:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 29 October 2026: 4 of 4 checks passed. Not run with live keys. No signed release has yet been run end to end through the deployed service |
-| Manifest engine (`src/manifest.ts`, `src/connector.ts`) | Built. Not used by any connector and not covered by tests. See [docs/MANIFEST.md](docs/MANIFEST.md) |
+| Manifest engine (`src/manifest.ts`, `src/connector.ts`) | Built and covered by unit tests. Not used by any connector in the service yet. See [docs/MANIFEST.md](docs/MANIFEST.md) |
 | Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](RUNBOOK.md). Open items are in [RESUME.md](RESUME.md) |
 | Live money | Off. Live keys are refused unless the service is started with `PARMANA_ALLOW_LIVE_KEYS=true` |
 
@@ -21,7 +21,7 @@ Parmana core decides whether an action may run and records the decision. This re
 | This README | What the repository is, how to run the service, and the layout |
 | [docs/API.md](docs/API.md) | The HTTP routes, the signed release, every answer, the limits and the log events |
 | [docs/RAZORPAY.md](docs/RAZORPAY.md) | The `razorpay:refund` capability: request, credential, behaviour, answer, errors |
-| [docs/MANIFEST.md](docs/MANIFEST.md) | The manifest format and engine (not in use yet) |
+| [docs/MANIFEST.md](docs/MANIFEST.md) | The manifest format and engine (tested, not used by a connector yet) |
 | [SETUP.md](SETUP.md) | The Vercel project and every environment variable |
 | [RUNBOOK.md](RUNBOOK.md) | Deploying, verifying, shipping a change, troubleshooting, and recovering a release that was recorded but not confirmed |
 | [RESUME.md](RESUME.md) | Current status and open items, with owners |
@@ -52,7 +52,7 @@ For a local run, copy `.env.example` to `.env` and fill it in. `npm start` reads
 | `PARMANA_DATABASE_URL` | With `postgres` | none | The database for replay protection. The service creates its table on start |
 | `PARMANA_SERVICE_PORT` | No | `8080` | Port to listen on. An integer from 1 to 65535 |
 | `PARMANA_SERVICE_HOST` | No | `127.0.0.1` | Address to bind. A hosted service needs `0.0.0.0` |
-| `PARMANA_CONNECTOR_TIMEOUT_MS` | No | `10000` | Time limit for a connector call, in milliseconds (100 to 120000). The generic connector applies it. The Razorpay connector does not: it uses its own 4-second limit per call. See [docs/RAZORPAY.md](docs/RAZORPAY.md) |
+| `PARMANA_CONNECTOR_TIMEOUT_MS` | No | `10000` | Time limit for a connector call, in milliseconds (100 to 120000). For the Razorpay connector it is the total for all of its calls for one release. See [docs/RAZORPAY.md](docs/RAZORPAY.md) |
 
 Secrets are read from the environment. How they are placed there, whether by the host's settings or a secret manager, is a deployment decision and is not made in this repository.
 
@@ -68,7 +68,7 @@ A release that passes runs the connector once. A refused release returns `403` w
 
 ## Logs
 
-The service writes one JSON line per event to stdout. A log line never contains a credential, a request body, or an upstream response, and the connector's error detail is not logged, only its code. The events are listed in [docs/API.md](docs/API.md#logs).
+The service writes one JSON line per event to stdout. A log line never contains a credential or a request body. A failed connector call is logged with its error code and the connector's own message, capped at 300 characters. That message never holds the credential, and for Razorpay it carries Razorpay's error description. The events are listed in [docs/API.md](docs/API.md#logs).
 
 On SIGTERM or SIGINT, the service stops accepting new connections, lets in-flight requests finish for up to 25 seconds, and then exits.
 
@@ -86,8 +86,8 @@ The Vercel adapter strips the `/api` prefix and passes the request to the same h
 | Path | Contents | Imports |
 | --- | --- | --- |
 | `src/connector-contract.ts` | The shared contract: request, response, error and connector interface | Nothing |
-| `src/connector.ts` | The generic connector, which runs a manifest's HTTP calls. It re-exports the contract. Not in use yet | The contract and the manifest engine |
-| `src/manifest.ts`, `schema/manifest.schema.json` | Manifest loading and validation. Not in use yet | `ajv`, `yaml` |
+| `src/connector.ts` | The generic connector, which runs a manifest's HTTP calls. It re-exports the contract. Tested, not used by a connector yet | The contract and the manifest engine |
+| `src/manifest.ts`, `schema/manifest.schema.json` | Manifest loading and validation. Tested, not used by a connector yet | `ajv`, `yaml` |
 | `src/connectors/<vendor>/` | One folder per vendor connector | Node built-ins, its own folder, and the contract only |
 | `src/service/` | The service: configuration, release verification, replay store, HTTP server, logging, and the registry of connectors | The contract, the connector registry, and `@parmana/crypto` |
 | `src/main.ts` | The entry point for the local service | The service |
@@ -119,7 +119,7 @@ These rules keep connectors separate from each other and from the manifest engin
 
 ## Razorpay connector
 
-`src/connectors/razorpay/razorpay-connector.ts` exports `createRazorpayConnector`, which implements `razorpay:refund`. It refunds a payment once: each refund carries the release's `businessTransactionId` as its receipt, and a repeat returns the existing refund instead of creating another. Refusals happen before any call to Razorpay, live keys are refused unless allowed, and a failure is reported with its code only. The full behaviour, its limits (including a check that reads at most 100 refunds), the answer and the error codes are in [docs/RAZORPAY.md](docs/RAZORPAY.md).
+`src/connectors/razorpay/razorpay-connector.ts` exports `createRazorpayConnector`, which implements `razorpay:refund`. It refunds a payment once: each refund carries the release's `businessTransactionId` as its receipt, and a repeat returns the existing refund instead of creating another. Refusals happen before any call to Razorpay, live keys are refused unless allowed, and the caller receives only the error code. The connector reads up to 1,000 refunds to look for an earlier one, and refuses rather than guess beyond that. A failure after a refund may have been sent says to check Razorpay before any other action. The full behaviour, its limits, the answer and the error codes are in [docs/RAZORPAY.md](docs/RAZORPAY.md).
 
 ## Razorpay test-mode run
 

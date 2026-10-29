@@ -227,7 +227,7 @@ npm run build
 npm test
 ```
 
-Expected: the build exits without errors, and tests report no failures. The count of passed and skipped tests may change as tests are added. The 3 skipped tests need a PostgreSQL database and are skipped locally.
+Expected: the build exits without errors, and tests report no failures. The count of passed and skipped tests may change as tests are added. The 3 PostgreSQL tests are skipped unless `PARMANA_TEST_DATABASE_URL` is set. CI sets it.
 
 For a change to `api/`, also run the adapter tests:
 
@@ -287,7 +287,7 @@ The service records a release before it runs the connector. A release that has b
 
 **Steps**
 
-1. **Find the transaction id.** Read the runtime log and find the `connector_failed` or `release_answered` line for the release. It shows `businessTransactionId` and the error code, but not the payment id. Get the payment id (`pay_...`) from the parmana-core record of the action.
+1. **Find the transaction id.** Read the runtime log and find the `connector_failed` or `release_answered` line for the release. It shows `businessTransactionId`, the error code, and the connector's message (`detail`). The message says whether a refund may exist. It does not show the payment id. Get the payment id (`pay_...`) from the parmana-core record of the action.
 
    ```bash
    vercel logs parmana-connectors.vercel.app --json
@@ -304,10 +304,10 @@ The service records a release before it runs the connector. A release that has b
 3. **Check Razorpay for a refund with that receipt.** Each refund made by the connector carries the `businessTransactionId` as its receipt. In the Razorpay Dashboard, in the mode the key belongs to, open the payment and look at its refunds. Or, from your own machine with the key in an environment variable (never pasted), replace `<pay_id>` and run:
 
    ```bash
-   curl -s -u "$RAZORPAY_KEY_PAIR" "https://api.razorpay.com/v1/payments/<pay_id>/refunds?count=100"
+   curl -s -u "$RAZORPAY_KEY_PAIR" "https://api.razorpay.com/v1/payments/<pay_id>/refunds?count=100&skip=0"
    ```
 
-   Look for `"receipt":"<businessTransactionId>"`. The query reads the same first 100 refunds as the connector, so a payment with more refunds needs the Dashboard.
+   Look for `"receipt":"<businessTransactionId>"`. Each page holds 100 refunds, so change `skip` to `100`, `200` and so on until a page comes back short. The connector reads at most 1,000 refunds; a payment with more needs the Dashboard.
 
 4. **Decide, and record the decision.**
    - **A refund with that receipt exists.** The refund was made. Record it in the business record. Do not resend. The refusal is correct.

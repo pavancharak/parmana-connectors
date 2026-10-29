@@ -28,16 +28,17 @@ The credential is one value: `<key id>:<key secret>`.
 
 ## What it does
 
-1. Lists the payment's refunds with `GET /v1/payments/{pay_id}/refunds?count=100`.
+1. Lists the payment's refunds, 100 at a time, with `GET /v1/payments/{pay_id}/refunds?count=100&skip=N`. It reads pages until it has a match or reaches a short page, and reads at most 10 pages (1,000 refunds).
 2. If one of them has `receipt` equal to the `businessTransactionId`, returns that refund with `alreadyRefunded: true`. It creates nothing.
 3. Otherwise creates the refund with `POST /v1/payments/{pay_id}/refund`, body `{ amount, speed: "normal", receipt, notes: { parmanaBusinessTransactionId } }`. It returns the new refund with `alreadyRefunded: false`.
 
-Each call has its own limit of 4 seconds, so the two calls fit inside the 10-second limit that parmana-core registers for the connector. No call is retried.
+The time limit is `PARMANA_CONNECTOR_TIMEOUT_MS` (default 10 s) for the whole release, not for each call. Each call is given what is left of it, so the list and the refund together never run past the limit. No call is retried.
 
 ### Limits of the repeat check
 
-- The check reads one page of up to 100 refunds. If a payment has more than 100 refunds, an earlier refund with the same receipt may not be seen, and a second refund could be created. The connector does not page through the list. This is a known gap.
+- The check reads at most 1,000 refunds on one payment. If the payment has more, the connector refuses with `upstream_error` and creates no refund, because it cannot rule out an earlier one. Check Razorpay's dashboard in that case.
 - An earlier refund is returned whatever its `status` is. If an earlier attempt is in a failed state, the repeat returns it and does not try again. Check the status in the answer.
+- A list answer without an `items` array is refused. It is not read as "no earlier refund".
 
 ## The answer
 
@@ -68,11 +69,16 @@ The connector throws a `ConnectorError`. The service returns only its code, as `
 | `invalid_input` | A refusal of the request: target, amount or missing `businessTransactionId`. No call was made | The release as sent by parmana-core |
 | `credential_invalid` | The key pair is malformed, or a live key is used without `PARMANA_ALLOW_LIVE_KEYS=true`. No call was made | The Vercel or local setting |
 | `unknown_capability` | The capability is not `razorpay:refund` | The release's capability |
-| `upstream_error` (Razorpay refused) | Razorpay returned an error for the list or the refund. Its code and description are in the connector's error text | Razorpay's dashboard. The error text is not logged |
-| `upstream_error` (not reached) | The network call failed. The refund may or may not have been created | Razorpay's dashboard, using the recovery steps in [RUNBOOK.md](../RUNBOOK.md) |
-| `timeout` | A call took longer than 4 seconds. The refund may or may not have been created | As above |
+| `upstream_error` (Razorpay refused) | Razorpay returned an error for the list or the refund. Its code and description are in the connector's message, which the service logs | Razorpay's dashboard |
+| `upstream_error` (not reached) | The network call failed | The message says whether a refund may exist. Follow the recovery steps in [RUNBOOK.md](../RUNBOOK.md) |
+| `timeout` | A call ran out of the time limit | As above |
 
-For a network failure or a timeout, the connector's message says to resend the same release. The service does not allow that: the replay record already exists, so the resend is refused. Follow the recovery steps in [RUNBOOK.md](../RUNBOOK.md) instead.
+The message says what the operator must check:
+
+- **No refund was created.** The failure came from the list call, or the refund call never left the service. Nothing needs checking in Razorpay before the release is looked at again.
+- **A refund may have been created**, after the refund call was sent and no answer came back. The message names the receipt. Check Razorpay for a refund with that receipt before any other action, using the steps in [RUNBOOK.md](../RUNBOOK.md).
+
+The service refuses a resend of the same release, because the replay record already exists. A resend cannot be the way to recover.
 
 ## Test-mode run
 
@@ -84,6 +90,6 @@ The last recorded run passed 4 of 4 checks on 29 October 2026, as noted in [RESU
 
 ## Not covered yet
 
-- A payment with more than 100 refunds (see the limits above).
+- A payment with more than 1,000 refunds is refused, not refunded. Such a payment needs a person to check Razorpay.
 - Live keys. Live money is off, and no live run is recorded.
-- `PARMANA_CONNECTOR_TIMEOUT_MS` is ignored by this connector. Its own 4-second limit applies to each call.
+- The paging parameters (`count`, `skip`) are used as Razorpay's API reference describes them. The test-mode run has not yet been repeated against them.

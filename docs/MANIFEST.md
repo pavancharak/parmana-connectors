@@ -4,9 +4,9 @@ The manifest engine turns a description of a vendor's HTTP API into a connector.
 
 ## Status
 
-**Not in use.** The service's registry (`src/service/registry.ts`) runs only the Razorpay connector, and nothing else imports `createGenericConnector`. No test runs a manifest through the engine. The only test that touches it is the boundary test, which enforces that vendor connectors do not import it (see the README's [rules for connectors](../README.md#rules-for-connectors)).
+**Tested, not in use.** `tests/manifest.test.ts` covers the validation rules, the request the engine builds, and its failure paths (refused inputs, credential handling, non-2xx answers, redirects, time limits, answer parsing and size). The service's registry (`src/service/registry.ts`) runs only the Razorpay connector, and no connector imports `createGenericConnector` yet. The boundary test (see the README's [rules for connectors](../README.md#rules-for-connectors)) keeps vendor connectors from importing the engine.
 
-Treat the engine as unproven until a connector uses it and a test covers it.
+Registering a connector that uses the engine is a separate change. It needs a fake of the vendor's API and the review that a new connector gets.
 
 ## What a manifest describes
 
