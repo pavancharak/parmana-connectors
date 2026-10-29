@@ -9,7 +9,7 @@ Parmana core decides whether an action may run and records the decision. This re
 | Part | State |
 | --- | --- |
 | Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built and tested. Not deployed |
-| Razorpay connector (`razorpay:refund`) | Built and tested against a fake Razorpay. Not run against Razorpay's test mode yet |
+| Razorpay connector (`razorpay:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 29 October 2026: 4 of 4 checks passed. Not run with live keys |
 | Deployment, hosting and secret storage | Not started. Decisions pending |
 | Live money | Off. Live keys are refused unless the service is started with `PARMANA_ALLOW_LIVE_KEYS=true` |
 
