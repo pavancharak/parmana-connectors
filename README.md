@@ -105,6 +105,19 @@ These rules keep connectors separate from each other and from the manifest engin
 - **Receipt:** each refund carries the release's `businessTransactionId` as its receipt. Before refunding, the connector lists the payment's refunds. If one already carries that receipt, it returns that refund and does not refund again.
 - **Failures:** a Razorpay error is reported with its code and description, to the service's log only. A network failure is reported as possibly executed, so the operator checks Razorpay before resending.
 
+## Razorpay test-mode run
+
+This checks the connector against Razorpay's test API. Run it on your own machine, with a test key and a captured test payment:
+
+```bash
+export RAZORPAY_KEY_PAIR="rzp_test_...:<secret>"
+export RAZORPAY_TEST_PAYMENT_ID="pay_..."
+npm ci && npm run build
+node scripts/razorpay-test-run.mjs
+```
+
+It creates one refund of `RAZORPAY_TEST_AMOUNT` paise (default 100), checks that a repeat returns the same refund, and checks two refusals. Test-mode refunds move no money. The script refuses anything that isn't a test key, and it never prints the key.
+
 ## Dependencies
 
 `@parmana/crypto` 0.1.0 is used for the canonical serialization that the signature covers. Its dependency `@parmana/shared` 0.1.0 loads `dotenv` at runtime without declaring it, so this repository declares `dotenv` directly. Remove that entry when the upstream package declares its own dependency.
