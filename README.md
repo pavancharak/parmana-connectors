@@ -23,6 +23,8 @@ npm start
 
 The service reads its settings from the environment. It refuses to start if a setting is missing or unsafe, and the error names the setting, never its value.
 
+For a local run, copy `.env.example` to `.env` and fill it in. `npm start` reads `.env` when it starts, so the settings persist between shells. `.env` is git-ignored and must never be committed. A hosted service takes the same settings from the host's environment, and a `.env` file is not deployed.
+
 | Setting | Required | Default | Purpose |
 | --- | --- | --- | --- |
 | `PARMANA_CONNECTOR` | Yes | none | The connector to run. One of: `razorpay` |
@@ -113,7 +115,7 @@ This checks the connector against Razorpay's test API. Run it on your own machin
 export RAZORPAY_KEY_PAIR="rzp_test_...:<secret>"
 export RAZORPAY_TEST_PAYMENT_ID="pay_..."
 npm ci && npm run build
-node scripts/razorpay-test-run.mjs
+node --env-file-if-exists=.env scripts/razorpay-test-run.mjs
 ```
 
 It creates one refund of `RAZORPAY_TEST_AMOUNT` paise (default 100), checks that a repeat returns the same refund, and checks two refusals. Test-mode refunds move no money. The script refuses anything that isn't a test key, and it never prints the key.
