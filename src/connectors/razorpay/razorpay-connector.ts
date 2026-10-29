@@ -1,4 +1,4 @@
-import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest, type ConnectorResponse, type GenericConnector } from "../../connector.js";
+import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest, type ConnectorResponse, type GenericConnector } from "../../connector-contract.js";
 
 /**
  * A connector for Razorpay refunds. It has the same shape as the generic
