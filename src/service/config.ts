@@ -53,8 +53,7 @@ export function loadServiceConfig(env: Readonly<Record<string, string | undefine
     throw new ConfigError(`${credentialVariable} cannot be used: ${reason}`);
   }
 
-  const publicKeyPath = required(env, "PARMANA_PUBLIC_KEY_FILE");
-  const publicKey = parsePublicKey(readers.readFile(publicKeyPath), "PARMANA_PUBLIC_KEY_FILE");
+  const publicKey = loadPublicKey(env, readers);
 
   const audience = requiredHttpsUrl(env, "PARMANA_RELEASE_AUDIENCE");
 
@@ -96,6 +95,28 @@ function parseBoolean(raw: string | undefined, name: string): boolean {
   if (raw === undefined || raw === "" || raw === "false") return false;
   if (raw === "true") return true;
   throw new ConfigError(`${name} must be true or false`);
+}
+
+/**
+ * The key comes from PARMANA_PUBLIC_KEY (the PEM text) or PARMANA_PUBLIC_KEY_FILE (a path to it), never both.
+ * Pasted PEM often arrives with literal \n sequences, so those are turned into line breaks.
+ */
+function loadPublicKey(env: Readonly<Record<string, string | undefined>>, readers: ConfigReaders): KeyObject {
+  const pem = env.PARMANA_PUBLIC_KEY;
+  const path = env.PARMANA_PUBLIC_KEY_FILE;
+  const hasPem = pem !== undefined && pem.trim() !== "";
+  const hasPath = path !== undefined && path.trim() !== "";
+
+  if (hasPem && hasPath) {
+    throw new ConfigError("set either PARMANA_PUBLIC_KEY or PARMANA_PUBLIC_KEY_FILE, not both");
+  }
+  if (hasPem) {
+    return parsePublicKey(pem.replace(/\\n/g, "\n"), "PARMANA_PUBLIC_KEY");
+  }
+  if (hasPath) {
+    return parsePublicKey(readers.readFile(path), "PARMANA_PUBLIC_KEY_FILE");
+  }
+  throw new ConfigError("PARMANA_PUBLIC_KEY or PARMANA_PUBLIC_KEY_FILE is required");
 }
 
 function parsePublicKey(pem: string, name: string): KeyObject {

@@ -76,6 +76,23 @@ describe("loadServiceConfig", () => {
     expect(refusal({ PARMANA_PUBLIC_KEY_FILE: "/keys/rsa.pem" })).toBe("PARMANA_PUBLIC_KEY_FILE must be an Ed25519 public key");
   });
 
+  it("accepts the key as PARMANA_PUBLIC_KEY, with literal \\n sequences turned into line breaks", () => {
+    const escaped = ed25519.replace(/\n/g, "\\n");
+    const config = loadServiceConfig(env({ PARMANA_PUBLIC_KEY_FILE: undefined, PARMANA_PUBLIC_KEY: escaped }), readers);
+    expect(config.publicKey.asymmetricKeyType).toBe("ed25519");
+  });
+
+  it("refuses a PARMANA_PUBLIC_KEY that is not Ed25519, naming the variable", () => {
+    expect(refusal({ PARMANA_PUBLIC_KEY_FILE: undefined, PARMANA_PUBLIC_KEY: rsa })).toBe(
+      "PARMANA_PUBLIC_KEY must be an Ed25519 public key",
+    );
+  });
+
+  it("refuses a public key given both ways, and a missing one", () => {
+    expect(refusal({ PARMANA_PUBLIC_KEY: ed25519 })).toBe("set either PARMANA_PUBLIC_KEY or PARMANA_PUBLIC_KEY_FILE, not both");
+    expect(refusal({ PARMANA_PUBLIC_KEY_FILE: undefined })).toBe("PARMANA_PUBLIC_KEY or PARMANA_PUBLIC_KEY_FILE is required");
+  });
+
   it("requires a database for the postgres store, and allows memory only when asked for", () => {
     expect(refusal({ PARMANA_DATABASE_URL: undefined })).toBe("PARMANA_DATABASE_URL is required");
     const config = loadServiceConfig(env({ PARMANA_NONCE_STORE: "memory", PARMANA_DATABASE_URL: undefined }), readers);
