@@ -124,8 +124,11 @@ export function createRazorpayConnector(options: RazorpayConnectorOptions = {}):
   };
 }
 
-/** Splits "<key id>:<key secret>" and returns the Basic authorization header. Nothing it throws contains the value. */
-function basicAuthorization(value: string, allowLiveKeys: boolean): string {
+/**
+ * Checks that a credential can be used, without ever naming its value in the
+ * error. Used at startup by the service, and on every call by the connector.
+ */
+export function assertRazorpayCredential(value: string, allowLiveKeys: boolean): void {
   const separator = value.indexOf(":");
   const keyId = separator < 0 ? "" : value.slice(0, separator);
   const keySecret = separator < 0 ? "" : value.slice(separator + 1);
@@ -133,9 +136,14 @@ function basicAuthorization(value: string, allowLiveKeys: boolean): string {
     throw new ConnectorError("credential_invalid", "the Razorpay credential must be \"<key id>:<key secret>\" with a rzp_test_ or rzp_live_ key id");
   }
   if (keyId.startsWith("rzp_live_") && !allowLiveKeys) {
-    throw new ConnectorError("credential_invalid", "live Razorpay keys are refused: set PARMANA_RAZORPAY_ALLOW_LIVE_KEYS=true to allow them");
+    throw new ConnectorError("credential_invalid", "live Razorpay keys are refused unless live keys are allowed for this service");
   }
-  return `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString("base64")}`;
+}
+
+/** The Basic authorization header for a credential that has passed assertRazorpayCredential. */
+function basicAuthorization(value: string, allowLiveKeys: boolean): string {
+  assertRazorpayCredential(value, allowLiveKeys);
+  return `Basic ${Buffer.from(value).toString("base64")}`;
 }
 
 function answer(refund: RazorpayRefund, alreadyRefunded: boolean): ConnectorResponse {
