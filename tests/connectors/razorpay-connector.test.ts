@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest } from "../../src/connector.js";
+import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest } from "../../src/connector-contract.js";
 import { RAZORPAY_REFUND_CAPABILITY, createRazorpayConnector } from "../../src/connectors/razorpay/razorpay-connector.js";
 
 const PAYMENT = "pay_TestPayment01";
