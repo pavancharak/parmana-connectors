@@ -30,7 +30,8 @@ For a local run, copy `.env.example` to `.env` and fill it in. `npm start` reads
 | `PARMANA_CONNECTOR` | Yes | none | The connector to run. One of: `razorpay` |
 | `RAZORPAY_KEY_PAIR` | Yes, for `razorpay` | none | The Razorpay credential, `<key id>:<key secret>`. Its key id starts with `rzp_test_` or `rzp_live_` |
 | `PARMANA_ALLOW_LIVE_KEYS` | No | `false` | Accepts `rzp_live_` keys. Leave unset until a live test has been approved |
-| `PARMANA_PUBLIC_KEY_FILE` | Yes | none | Path to Parmana's Ed25519 public key, in PEM. Releases are refused unless they verify against it |
+| `PARMANA_PUBLIC_KEY` | One of the two | none | Parmana's Ed25519 public key, as PEM text. Literal `\n` sequences are read as line breaks. Releases are refused unless they verify against it |
+| `PARMANA_PUBLIC_KEY_FILE` | One of the two | none | Path to Parmana's Ed25519 public key, in PEM. Set this or `PARMANA_PUBLIC_KEY`, never both |
 | `PARMANA_RELEASE_AUDIENCE` | Yes | none | This endpoint's URL, exactly as registered in parmana-core. Must be `https://` |
 | `PARMANA_NONCE_STORE` | No | `postgres` | `postgres` shares replay protection across instances. `memory` is for one instance and tests |
 | `PARMANA_DATABASE_URL` | With `postgres` | none | The database for replay protection. The service creates its table on start |
