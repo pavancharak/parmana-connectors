@@ -2,6 +2,16 @@
 
 Resume here. The deployment runbook is `RUNBOOK.md` and the variable list is `SETUP.md`, both on `main`.
 
+## Closed on 29 October 2026
+
+- **PR #12 merged** as `748e45c`. The docs and review fixes are on `main`.
+- **Production built from `748e45c`.** The Vercel build log for deployment `ixljvsdil` shows the clone of `main` at that commit. The deployment is `Ready`, and `parmana-connectors.vercel.app` points to it.
+- **Razorpay test-mode run passed 4 of 4 checks** on the owner's machine. Refund `rfnd_TtmL60YodqkxxG` was created in test mode, a repeat returned the same refund, and both refusals were made before any call to Razorpay.
+- **Test suite passes on Node 24** with PostgreSQL 16: 86 tests, including the 3 replay-store tests that need a database.
+- **Accepted, not tested live:** paging on a payment with more than 100 refunds. The fake-server tests cover it. A live test needs a payment that is impractical to create in test mode.
+- **Not yet used:** the manifest engine (`src/manifest.ts`, `src/connector.ts`). It is tested and no connector uses it. Wiring it in is a separate change.
+- **Still open** (listed below): the signed-release test through the preview and production, the production registration in parmana-core, and confirming the stored key values.
+
 ## Where things stand
 
 - **Production connector is live** at https://parmana-connectors.vercel.app. `/api/health` returns UP. `/api/execute` refuses an unsigned request with HTTP 400, which shows its settings load and its database connects.
