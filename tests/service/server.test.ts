@@ -1,6 +1,6 @@
 import type { AddressInfo } from "node:net";
 import type { Server } from "node:http";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ConnectorError, type ConnectorRequest, type GenericConnector } from "../../src/connector-contract.js";
 import { MemoryNonceStore, type NonceStore } from "../../src/service/nonce-store.js";
@@ -105,6 +105,23 @@ describe("the service", () => {
     expect(JSON.parse(text)).toMatchObject({ success: false, result: { error: "connector failed: upstream_error" } });
     expect(text).not.toContain("Razorpay refused");
     expect(text).not.toContain("super-secret-value");
+  });
+
+  it("logs the connector's message for a failure, and never the credential", async () => {
+    reset("fail");
+    const written: string[] = [];
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: string | Uint8Array) => {
+      written.push(String(chunk));
+      return true;
+    });
+    try {
+      await post(signed(release()));
+    } finally {
+      spy.mockRestore();
+    }
+    const line = written.map((text) => JSON.parse(text) as Record<string, unknown>).find((entry) => entry.event === "connector_failed");
+    expect(line).toMatchObject({ code: "upstream_error", detail: "Razorpay refused the refund" });
+    expect(written.join("")).not.toContain("super-secret-value");
   });
 
   it("refuses a release with a bad signature and does not run the connector", async () => {

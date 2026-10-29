@@ -52,11 +52,11 @@ Security: the Vercel bypass token appeared again in debug output. Confirm it was
 2. **Production registration in parmana-core.** The operator, with a second person as checker. Production cannot take a release until this is approved.
 3. **Production test of a signed release**, in Razorpay test mode, after step 2. Expected: a refund that repeats safely.
 4. **Confirm the production key values.** `RAZORPAY_KEY_PAIR` must be a test key. The stored `PARMANA_PUBLIC_KEY` must match `/keys/default`.
-5. **Postgres tests.** Three tests need a real database and were skipped locally. Run them in CI, which has a PostgreSQL service, or against a local database. This proves replay protection across instances.
-6. **Node 24 check.** The sandbox ran Node 22. CI runs 24. Run `npm test` on Node 24 once.
+5. **Postgres tests.** Done locally against PostgreSQL 16: all 86 tests pass, including the 3 replay-store tests that need a database. CI should show the same on its PostgreSQL service.
+6. **Node 24 check.** Done: the build and all 86 tests pass on Node 24.22.
 7. **The `TS2688` warning** in Vercel's build log. Not blocking. Fix it in its own PR.
 8. **Monitoring.** Logs exist, but no alerts. Decide what should alert, and who acts on it.
-9. **The crash case.** A release is recorded before the connector runs. If the process stops during a refund, that release stays refused, and someone must check Razorpay by hand. The README documents this. A written procedure for it is still missing.
+9. **The crash case.** A release is recorded before the connector runs. If the process stops during a refund, that release stays refused, and someone must check Razorpay by hand. The README documents this. The written procedure is in `RUNBOOK.md`, under "Recovering a release that was recorded but not confirmed". Razorpay's own refund check is the step that decides it.
 10. **Live money.** Off. It needs a separate approval, a live key, and `PARMANA_ALLOW_LIVE_KEYS=true` only after that approval.
 11. **Paytm move** (ADR-0018). It waits until the Razorpay connector is live from this repository.
 

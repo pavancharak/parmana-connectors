@@ -17,8 +17,12 @@ import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest, 
 export const RAZORPAY_REFUND_CAPABILITY = "razorpay:refund";
 
 const API = "https://api.razorpay.com/v1";
-/** Two calls must fit inside the connector timeout that Parmana registers (10 s). */
-const CALL_TIMEOUT_MS = 4_000;
+/** The time limit when the caller gives none. The service always gives one. */
+const DEFAULT_BUDGET_MS = 10_000;
+/** Refunds read per page when looking for an earlier refund. */
+const REFUND_PAGE_SIZE = 100;
+/** Pages read before refusing. 1,000 refunds on one payment is far beyond normal use. */
+const MAX_REFUND_PAGES = 10;
 const PAYMENT_ID = /^pay_[A-Za-z0-9]{6,40}$/;
 const KEY_ID = /^rzp_(test|live)_[A-Za-z0-9]+$/;
 
@@ -42,29 +46,46 @@ interface RazorpayCall {
   readonly json: Record<string, unknown>;
 }
 
+/** What the connector was doing when a call failed. Decides what the operator must check. */
+type Stage = "listing the payment's refunds" | "creating the refund";
+
+interface CallContext {
+  readonly authorization: string;
+  /** Epoch milliseconds. Every call must finish before this. */
+  readonly deadline: number;
+  readonly receipt: string;
+}
+
 export function createRazorpayConnector(options: RazorpayConnectorOptions = {}): GenericConnector {
   const doFetch = options.fetch ?? fetch;
   const allowLiveKeys = options.allowLiveKeys ?? false;
 
-  async function call(method: "GET" | "POST", path: string, authorization: string, body?: unknown): Promise<RazorpayCall> {
+  /**
+   * One call to Razorpay, limited by what is left of the overall time limit.
+   * A GET never creates a refund. A POST may have, if it was sent and no answer came back.
+   */
+  async function call(stage: Stage, method: "GET" | "POST", path: string, ctx: CallContext, body?: unknown): Promise<RazorpayCall> {
+    const remaining = ctx.deadline - Date.now();
+    if (remaining <= 0) {
+      throw noAnswer("timeout", stage, method, false, ctx.receipt);
+    }
+
     let response: Response;
     try {
       response = await doFetch(`${API}${path}`, {
         method,
         headers: {
-          Authorization: authorization,
+          Authorization: ctx.authorization,
           ...(body === undefined ? {} : { "Content-Type": "application/json" }),
         },
         body: body === undefined ? null : JSON.stringify(body),
         // The credential must never reach another host.
         redirect: "error",
-        signal: AbortSignal.timeout(CALL_TIMEOUT_MS),
+        signal: AbortSignal.timeout(remaining),
       });
     } catch (err) {
-      if (err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError")) {
-        throw new ConnectorError("timeout", "Razorpay did not answer in time. The refund may or may not have been created; resend the same release.");
-      }
-      throw new ConnectorError("upstream_error", "Razorpay could not be reached. The refund may or may not have been created; resend the same release.");
+      const timedOut = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+      throw noAnswer(timedOut ? "timeout" : "upstream_error", stage, method, true, ctx.receipt);
     }
 
     const text = await response.text();
@@ -100,17 +121,40 @@ export function createRazorpayConnector(options: RazorpayConnectorOptions = {}):
         throw new ConnectorError("invalid_input", "the release has no businessTransactionId to use as the receipt");
       }
 
-      const existing = await call("GET", `/payments/${paymentId}/refunds?count=100`, authorization);
-      if (existing.status !== 200) {
-        throw refusal("listing the payment's refunds", existing);
-      }
-      const items = (existing.json.items ?? []) as RazorpayRefund[];
-      const earlier = items.find((item) => item.receipt === receipt);
-      if (earlier !== undefined) {
-        return answer(earlier, true);
+      const budget = context.timeoutMs > 0 ? context.timeoutMs : DEFAULT_BUDGET_MS;
+      const ctx: CallContext = { authorization, deadline: Date.now() + budget, receipt };
+
+      for (let page = 0; ; page++) {
+        if (page === MAX_REFUND_PAGES) {
+          throw new ConnectorError(
+            "upstream_error",
+            `the payment has more than ${MAX_REFUND_PAGES * REFUND_PAGE_SIZE} refunds, so an earlier refund for receipt ${receipt} cannot be ruled out. No refund was created; check Razorpay`,
+          );
+        }
+        const listed = await call(
+          "listing the payment's refunds",
+          "GET",
+          `/payments/${paymentId}/refunds?count=${REFUND_PAGE_SIZE}&skip=${page * REFUND_PAGE_SIZE}`,
+          ctx,
+        );
+        if (listed.status !== 200) {
+          throw refusal("listing the payment's refunds", listed);
+        }
+        // A list that is not a list must not be read as "no earlier refund": that could refund twice.
+        if (!Array.isArray(listed.json.items)) {
+          throw new ConnectorError("upstream_error", "Razorpay's refund list had no items. No refund was created; check Razorpay");
+        }
+        const items = listed.json.items as RazorpayRefund[];
+        const earlier = items.find((item) => item.receipt === receipt);
+        if (earlier !== undefined) {
+          return answer(earlier, true);
+        }
+        if (items.length < REFUND_PAGE_SIZE) {
+          break;
+        }
       }
 
-      const created = await call("POST", `/payments/${paymentId}/refund`, authorization, {
+      const created = await call("creating the refund", "POST", `/payments/${paymentId}/refund`, ctx, {
         amount,
         speed: "normal",
         receipt,
@@ -163,8 +207,21 @@ function answer(refund: RazorpayRefund, alreadyRefunded: boolean): ConnectorResp
   };
 }
 
+/**
+ * A call that got no usable answer. A failed POST may have created the refund,
+ * so the message tells the operator to check Razorpay for the receipt. A failed
+ * GET, or a POST never sent, created nothing.
+ */
+function noAnswer(code: "timeout" | "upstream_error", stage: Stage, method: "GET" | "POST", sent: boolean, receipt: string): ConnectorError {
+  const reason = code === "timeout" ? "did not answer in time" : "could not be reached";
+  if (method === "POST" && sent) {
+    return new ConnectorError(code, `Razorpay ${reason} while ${stage}. A refund may have been created: check Razorpay for a refund with receipt ${receipt} before any other action`);
+  }
+  return new ConnectorError(code, `Razorpay ${reason} while ${stage}. No refund was created`);
+}
+
 /** Razorpay's own error code and description, when it gave them. Never the credential. */
-function refusal(stage: string, failed: RazorpayCall): ConnectorError {
+function refusal(stage: Stage, failed: RazorpayCall): ConnectorError {
   const error = (failed.json.error ?? {}) as { code?: unknown; description?: unknown };
   const code = typeof error.code === "string" ? error.code : "none";
   const description = typeof error.description === "string" ? error.description.slice(0, 200) : "no description";
