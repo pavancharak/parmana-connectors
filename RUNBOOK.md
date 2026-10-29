@@ -273,6 +273,49 @@ Each row is an error seen while building this deployment, with its cause and fix
 | `Everything up-to-date` after `git push --delete` | The branch was already deleted, or the delete did not run | Check with `git ls-remote --heads origin <branch>`. If it still lists the branch, run the delete on your own machine |
 | A Production deployment from an old commit appears and fails | **Redeploy** was used on an old deployment | Nothing live changed, because a failed deployment does not replace the production domain. Redeploy `main`, not an old commit |
 
+## Recovering a release that was recorded but not confirmed
+
+Use this when a release was recorded and the answer is unclear. Examples: the service answered `connector failed: upstream_error` or `connector failed: timeout`, the process stopped during a refund, or a release is refused with `this businessTransactionId was already executed` and no answer reached you.
+
+The service records a release before it runs the connector. A release that has been recorded cannot run again, so resending it does nothing. Whether a refund exists is a question for Razorpay, and only Razorpay can answer it.
+
+**Rules**
+
+- Do not resend the same release. The service refuses it.
+- Do not delete rows from `parmana_connectors_nonces` to make a release run again. That is a decision for the owner, not a step in this runbook.
+- Do not paste the key pair, the connection string or any secret into chat.
+
+**Steps**
+
+1. **Find the transaction id.** Read the runtime log and find the `connector_failed` or `release_answered` line for the release. It shows `businessTransactionId` and the error code, but not the payment id. Get the payment id (`pay_...`) from the parmana-core record of the action.
+
+   ```bash
+   vercel logs parmana-connectors.vercel.app --json
+   ```
+
+2. **Check the replay record (read only).** In the Supabase project `parmana-connectors`, open the SQL editor and run this, replacing the placeholder. Do not use the `parmana-sandbox` project.
+
+   ```sql
+   SELECT nonce, expires_at FROM parmana_connectors_nonces WHERE nonce = 'release:<businessTransactionId>';
+   ```
+
+   A row means the release was recorded. No row means either the connector never ran, or the row was removed after it expired. Rows are deleted by the service when it checks a later release, once they are more than 5 minutes past `expires_at`. So an old row can be missing even though a refund was made. Step 3 decides which.
+
+3. **Check Razorpay for a refund with that receipt.** Each refund made by the connector carries the `businessTransactionId` as its receipt. In the Razorpay Dashboard, in the mode the key belongs to, open the payment and look at its refunds. Or, from your own machine with the key in an environment variable (never pasted), replace `<pay_id>` and run:
+
+   ```bash
+   curl -s -u "$RAZORPAY_KEY_PAIR" "https://api.razorpay.com/v1/payments/<pay_id>/refunds?count=100"
+   ```
+
+   Look for `"receipt":"<businessTransactionId>"`. The query reads the same first 100 refunds as the connector, so a payment with more refunds needs the Dashboard.
+
+4. **Decide, and record the decision.**
+   - **A refund with that receipt exists.** The refund was made. Record it in the business record. Do not resend. The refusal is correct.
+   - **No refund with that receipt exists.** No refund was made, as far as Razorpay shows. Tell the owner before anything else. Then raise a new action in parmana-core under a new `businessTransactionId`, following its approval process. Production needs two people (maker and checker).
+   - **Razorpay cannot be reached, or the answer is unclear.** Wait, and check again. Do not act on a guess.
+
+After a row has been removed, the service would accept a release with the same `businessTransactionId` again. Step 3 is then the only guard, so never send an old `businessTransactionId` after its row has gone.
+
 ## Rollback, cleanup and the command summary
 
 **Rollback.** Vercel keeps earlier deployments. To return Production to an earlier, working deployment, open it in **Deployments**, choose **… → Promote to Production** (or **Redeploy** for the same effect), and check Step 6 again. Then fix `main` by a normal pull request. Do not revert history on `main`.

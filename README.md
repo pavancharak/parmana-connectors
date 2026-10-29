@@ -8,10 +8,25 @@ Parmana core decides whether an action may run and records the decision. This re
 
 | Part | State |
 | --- | --- |
-| Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built and tested. Not deployed |
-| Razorpay connector (`razorpay:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 29 October 2026: 4 of 4 checks passed. Not run with live keys |
-| Deployment, hosting and secret storage | Not started. Decisions pending |
+| Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built, tested, and running on Vercel production at `https://parmana-connectors.vercel.app` |
+| Razorpay connector (`razorpay:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 29 October 2026: 4 of 4 checks passed. Not run with live keys. No signed release has yet been run end to end through the deployed service |
+| Manifest engine (`src/manifest.ts`, `src/connector.ts`) | Built. Not used by any connector and not covered by tests. See [docs/MANIFEST.md](docs/MANIFEST.md) |
+| Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](RUNBOOK.md). Open items are in [RESUME.md](RESUME.md) |
 | Live money | Off. Live keys are refused unless the service is started with `PARMANA_ALLOW_LIVE_KEYS=true` |
+
+## Documentation
+
+| File | Read it for |
+| --- | --- |
+| This README | What the repository is, how to run the service, and the layout |
+| [docs/API.md](docs/API.md) | The HTTP routes, the signed release, every answer, the limits and the log events |
+| [docs/RAZORPAY.md](docs/RAZORPAY.md) | The `razorpay:refund` capability: request, credential, behaviour, answer, errors |
+| [docs/MANIFEST.md](docs/MANIFEST.md) | The manifest format and engine (not in use yet) |
+| [SETUP.md](SETUP.md) | The Vercel project and every environment variable |
+| [RUNBOOK.md](RUNBOOK.md) | Deploying, verifying, shipping a change, troubleshooting, and recovering a release that was recorded but not confirmed |
+| [RESUME.md](RESUME.md) | Current status and open items, with owners |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Branches, sign-off, checks, CI and how to add a connector |
+| [SECURITY.md](SECURITY.md) | How to report a vulnerability |
 
 ## Running the service
 
@@ -29,56 +44,59 @@ For a local run, copy `.env.example` to `.env` and fill it in. `npm start` reads
 | --- | --- | --- | --- |
 | `PARMANA_CONNECTOR` | Yes | none | The connector to run. One of: `razorpay` |
 | `RAZORPAY_KEY_PAIR` | Yes, for `razorpay` | none | The Razorpay credential, `<key id>:<key secret>`. Its key id starts with `rzp_test_` or `rzp_live_` |
-| `PARMANA_ALLOW_LIVE_KEYS` | No | `false` | Accepts `rzp_live_` keys. Leave unset until a live test has been approved |
+| `PARMANA_ALLOW_LIVE_KEYS` | No | `false` | Accepts `rzp_live_` keys. Leave unset until a live test has been approved. Must be `true` or `false` |
 | `PARMANA_PUBLIC_KEY` | One of the two | none | Parmana's Ed25519 public key, as PEM text. Literal `\n` sequences are read as line breaks. Releases are refused unless they verify against it |
 | `PARMANA_PUBLIC_KEY_FILE` | One of the two | none | Path to Parmana's Ed25519 public key, in PEM. Set this or `PARMANA_PUBLIC_KEY`, never both |
 | `PARMANA_RELEASE_AUDIENCE` | Yes | none | This endpoint's URL, exactly as registered in parmana-core. Must be `https://` |
 | `PARMANA_NONCE_STORE` | No | `postgres` | `postgres` shares replay protection across instances. `memory` is for one instance and tests |
 | `PARMANA_DATABASE_URL` | With `postgres` | none | The database for replay protection. The service creates its table on start |
-| `PARMANA_SERVICE_PORT` | No | `8080` | Port to listen on |
+| `PARMANA_SERVICE_PORT` | No | `8080` | Port to listen on. An integer from 1 to 65535 |
 | `PARMANA_SERVICE_HOST` | No | `127.0.0.1` | Address to bind. A hosted service needs `0.0.0.0` |
-| `PARMANA_CONNECTOR_TIMEOUT_MS` | No | `10000` | Limit for the connector's call, in milliseconds |
+| `PARMANA_CONNECTOR_TIMEOUT_MS` | No | `10000` | Time limit for a connector call, in milliseconds (100 to 120000). The generic connector applies it. The Razorpay connector does not: it uses its own 4-second limit per call. See [docs/RAZORPAY.md](docs/RAZORPAY.md) |
 
 Secrets are read from the environment. How they are placed there, whether by the host's settings or a secret manager, is a deployment decision and is not made in this repository.
 
-## What the service checks, in order
+## What the service checks
 
-For `POST /execute`, a request must pass every check before the connector runs.
+For `POST /execute`, a release must pass every check before the connector runs: the body's shape, the Ed25519 signature, the audience, the capability, the expiry (with 30 seconds of clock difference allowed), and then replay. The replay record is written only after the other checks pass, and before the connector runs. So a release refused for another reason can be sent again with a fresh signature, and two instances cannot both act on one release.
 
-1. **Shape.** The body is a signed release, within 256 KB.
-2. **Signature.** Ed25519, key id `default`, over the canonical serialization of the release. Any change after signing fails.
-3. **Audience.** The release names this endpoint's URL exactly.
-4. **Capability.** The connector serves the release's capability.
-5. **Expiry.** The release has not expired, allowing 30 seconds of clock difference.
-6. **Replay.** The `businessTransactionId` has not run before. It is recorded in the database before the connector runs, so two instances cannot both act on one release.
+A release that passes runs the connector once. A refused release returns `403` with every reason found, and nothing runs. The full list of checks, answers, status codes and limits is in [docs/API.md](docs/API.md).
 
-The replay record is written only after checks 1 to 5 pass, so a release refused for another reason can be sent again with a fresh signature.
-
-A release that passes every check runs the connector once. Its answer is `200` with `success`, `businessTransactionId`, `capability`, `result` and `executedAt`. A connector failure returns `success: false`, with only the error code (for example `connector failed: upstream_error`). The detail stays in the service's log and never reaches the caller.
-
-A release refused by a check returns `403` with the reasons. A body that is not a release returns `400`, a body over the limit returns `413`, and an unknown route returns `404`. If the replay database is unavailable, the service returns `500` and runs nothing.
-
-**Known limit.** A release is recorded before the connector runs. If the process stops after the record and before the connector finishes, that release is refused on every later attempt, and the operator must check the business system by hand. This is the price of acting at most once.
+**Known limit.** A release is recorded before the connector runs. If the process stops after the record and before the connector finishes, that release is refused on every later attempt, and the operator must check the business system by hand. This is the price of acting at most once. [RUNBOOK.md](RUNBOOK.md) has the steps.
 
 `GET /health` returns `{"status":"UP"}`. It shows that the process is running. It does not check the database or the business system.
 
 ## Logs
 
-The service writes one JSON line per event to stdout. A log line never contains a credential, a request body, or an upstream response. Events include `service_started`, `release_refused` (with the number of reasons), `release_answered`, `connector_failed` (with the error code), and `shutdown_started` and `shutdown_complete`.
+The service writes one JSON line per event to stdout. A log line never contains a credential, a request body, or an upstream response, and the connector's error detail is not logged, only its code. The events are listed in [docs/API.md](docs/API.md#logs).
 
 On SIGTERM or SIGINT, the service stops accepting new connections, lets in-flight requests finish for up to 25 seconds, and then exits.
+
+## Deployment on Vercel
+
+The production service is a set of Vercel functions:
+
+- `api/execute.ts` serves `POST /api/execute`.
+- `api/health.ts` serves `GET /api/health`.
+
+The Vercel adapter strips the `/api` prefix and passes the request to the same handler the local service uses. It reads the settings on its first request, not at build time. A missing or invalid setting returns `500` with `{"error":"service is not configured"}`, and the reason is written to the log as `service_not_configured`. Settings are read from the Vercel environment, which is set as described in [SETUP.md](SETUP.md). The build is not run on Vercel: `public/` holds a placeholder page, and the functions are compiled from `api/`.
 
 ## Layout
 
 | Path | Contents | Imports |
 | --- | --- | --- |
 | `src/connector-contract.ts` | The shared contract: request, response, error and connector interface | Nothing |
-| `src/connector.ts` | The generic connector, which runs a manifest's HTTP calls. It re-exports the contract | The contract and the manifest engine |
-| `src/manifest.ts`, `schema/manifest.schema.json` | Manifest loading and validation | `ajv`, `yaml` |
+| `src/connector.ts` | The generic connector, which runs a manifest's HTTP calls. It re-exports the contract. Not in use yet | The contract and the manifest engine |
+| `src/manifest.ts`, `schema/manifest.schema.json` | Manifest loading and validation. Not in use yet | `ajv`, `yaml` |
 | `src/connectors/<vendor>/` | One folder per vendor connector | Node built-ins, its own folder, and the contract only |
 | `src/service/` | The service: configuration, release verification, replay store, HTTP server, logging, and the registry of connectors | The contract, the connector registry, and `@parmana/crypto` |
-| `src/main.ts` | The entry point | The service |
-| `tests/` | Tests for connectors, the service, and the import rules | |
+| `src/main.ts` | The entry point for the local service | The service |
+| `api/execute.ts`, `api/health.ts` | The Vercel functions | The service |
+| `public/index.html` | The placeholder page at the site root | Nothing |
+| `scripts/razorpay-test-run.mjs` | The Razorpay test-mode check. Uses the built `dist/` | The built Razorpay connector |
+| `tests/` | Tests for connectors, the service, the Vercel adapter, and the import rules. The PostgreSQL tests are skipped unless `PARMANA_TEST_DATABASE_URL` is set | |
+| `docs/` | The API, connector and manifest references | |
+| `.github/` | CI, CodeQL, DCO, dependency review, Dependabot and code owners | |
 
 ## Rules for connectors
 
@@ -93,20 +111,15 @@ These rules keep connectors separate from each other and from the manifest engin
 1. Create `src/connectors/<vendor>/` and write the connector against `src/connector-contract.ts`. Implement `execute(request, context)`, and throw a `ConnectorError` for every refusal, with a message that never contains the credential.
 2. Make the connector act once. If the business system can repeat an action, check for an existing result before acting, keyed by the `businessTransactionId`. The Razorpay connector does this with the refund receipt.
 3. Refuse anything outside what the capability allows before any call is made: wrong target, wrong amount, wrong credential format.
-4. Add its credential to `src/service/registry.ts`: the environment variable, the check, and the factory. The service cannot select a connector without them.
-5. Add tests under `tests/connectors/` against a fake of the vendor's API, covering the refusals, the repeat case, and an error from the vendor that does not leak the credential.
-6. Run `npm test`. The boundary test must pass.
+4. Add its credential to `src/service/registry.ts`: the environment variable, the check, the factory, and a case in each switch. The service cannot select a connector without them.
+5. Add the connector's variable to `.env.example`, to the table in this README, and to [SETUP.md](SETUP.md). Add it to the Vercel environment as described in [RUNBOOK.md](RUNBOOK.md).
+6. Add tests under `tests/connectors/` against a fake of the vendor's API, covering the refusals, the repeat case, and an error from the vendor that does not leak the credential.
+7. Document the connector in `docs/` the way [docs/RAZORPAY.md](docs/RAZORPAY.md) does.
+8. Run `npm test`. The boundary test must pass.
 
 ## Razorpay connector
 
-`src/connectors/razorpay/razorpay-connector.ts` exports `createRazorpayConnector`, which implements `razorpay:refund`.
-
-- **Target:** the payment id, `pay_...`. Anything else is refused.
-- **Amount:** `parameters.amount`, a positive whole number of paise.
-- **Credential:** `<key id>:<key secret>`, with a key id that starts with `rzp_test_` or `rzp_live_`. It is sent as HTTP Basic authentication.
-- **Live keys:** refused unless live keys are allowed. The service checks this at startup and on every call.
-- **Receipt:** each refund carries the release's `businessTransactionId` as its receipt. Before refunding, the connector lists the payment's refunds. If one already carries that receipt, it returns that refund and does not refund again.
-- **Failures:** a Razorpay error is reported with its code and description, to the service's log only. A network failure is reported as possibly executed, so the operator checks Razorpay before resending.
+`src/connectors/razorpay/razorpay-connector.ts` exports `createRazorpayConnector`, which implements `razorpay:refund`. It refunds a payment once: each refund carries the release's `businessTransactionId` as its receipt, and a repeat returns the existing refund instead of creating another. Refusals happen before any call to Razorpay, live keys are refused unless allowed, and a failure is reported with its code only. The full behaviour, its limits (including a check that reads at most 100 refunds), the answer and the error codes are in [docs/RAZORPAY.md](docs/RAZORPAY.md).
 
 ## Razorpay test-mode run
 
@@ -119,7 +132,7 @@ npm ci && npm run build
 node --env-file-if-exists=.env scripts/razorpay-test-run.mjs
 ```
 
-It creates one refund of `RAZORPAY_TEST_AMOUNT` paise (default 100), checks that a repeat returns the same refund, and checks two refusals. Test-mode refunds move no money. The script refuses anything that isn't a test key, and it never prints the key.
+It creates one refund of `RAZORPAY_TEST_AMOUNT` paise (default 100), checks that a repeat returns the same refund, and checks two refusals. Test-mode refunds move no money. The script refuses anything that isn't a test key, and it never prints the key. `RAZORPAY_TEST_PAYMENT_ID` and `RAZORPAY_TEST_AMOUNT` are described in `.env.example`.
 
 ## Dependencies
 
@@ -130,12 +143,29 @@ It creates one refund of `RAZORPAY_TEST_AMOUNT` paise (default 100), checks that
 ```bash
 npm ci
 npm run build
+npm run typecheck
 npm test
 npm start
 ```
 
-Requires Node.js 24 or later.
+| Command | What it does |
+| --- | --- |
+| `npm run build` | Compiles to `dist/`. Required before `npm start` and the Razorpay test-mode run |
+| `npm run typecheck` | Type-checks without writing output |
+| `npm test` | Runs the Vitest suite. Tests that need PostgreSQL run only when `PARMANA_TEST_DATABASE_URL` is set |
+| `npm start` | Runs `dist/main.js`, reading `.env` if it exists |
+
+Requires Node.js 24 or later. CI runs Node 24.
+
+## Continuous integration
+
+The workflows run as listed below. The details are in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+- **CI** (pushes to `main` and pull requests): builds and tests on Node 24, with a throwaway PostgreSQL 16 for the replay-store tests.
+- **CodeQL** (pushes to `main`, pull requests into `main`, and weekly): analyses the TypeScript code.
+- **DCO** (pull requests into `main`): every commit needs a `Signed-off-by` line.
+- **Dependency review** (pull requests into `main`): flags newly added dependencies with known vulnerabilities.
 
 ## License
 
-Apache-2.0, as declared in `package.json`.
+Apache-2.0. The licence text is in [LICENSE](LICENSE), and `package.json` declares the same licence.

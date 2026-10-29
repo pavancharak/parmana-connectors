@@ -56,7 +56,7 @@ Security: the Vercel bypass token appeared again in debug output. Confirm it was
 6. **Node 24 check.** The sandbox ran Node 22. CI runs 24. Run `npm test` on Node 24 once.
 7. **The `TS2688` warning** in Vercel's build log. Not blocking. Fix it in its own PR.
 8. **Monitoring.** Logs exist, but no alerts. Decide what should alert, and who acts on it.
-9. **The crash case.** A release is recorded before the connector runs. If the process stops during a refund, that release stays refused, and someone must check Razorpay by hand. The README documents this. A written procedure for it is still missing.
+9. **The crash case.** A release is recorded before the connector runs. If the process stops during a refund, that release stays refused, and someone must check Razorpay by hand. The README documents this. The written procedure is in `RUNBOOK.md`, under "Recovering a release that was recorded but not confirmed". Razorpay's own refund check is the step that decides it.
 10. **Live money.** Off. It needs a separate approval, a live key, and `PARMANA_ALLOW_LIVE_KEYS=true` only after that approval.
 11. **Paytm move** (ADR-0018). It waits until the Razorpay connector is live from this repository.
 
