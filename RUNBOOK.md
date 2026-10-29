@@ -178,18 +178,20 @@ vercel inspect parmana-connectors.vercel.app --logs
 
 Expected: `no static build`, then `Build Completed`, then `Deployment completed`, then status `Ready`. A `TS2688` line may appear. It is a known warning, and the deployment still succeeds.
 
-**Check the health route** (protected, so use `vercel curl`):
+**Check the health route.** The production alias `https://parmana-connectors.vercel.app` answers without a login, so a plain request works:
 
 ```bash
-vercel curl https://parmana-connectors.vercel.app/api/health
+curl -sS https://parmana-connectors.vercel.app/api/health
 ```
 
-Expected: `{"status":"UP"}`.
+Expected: `{"status":"UP"}` with HTTP 200.
+
+Deployment-specific addresses (the ones that contain a hash, such as `parmana-connectors-<hash>-pavan-dev-singh-charaks-projects.vercel.app`) are protected by Vercel Authentication. Use `vercel curl` for those, with the same path.
 
 **Check the execute route with an unsigned request:**
 
 ```bash
-vercel curl https://parmana-connectors.vercel.app/api/execute -- -X POST -H "Content-Type: application/json" -d "{}"
+curl -sS -X POST -H "Content-Type: application/json" -d "{}" https://parmana-connectors.vercel.app/api/execute
 ```
 
 Expected: `{"error":"request body is not a signed release"}`. That result proves the settings loaded, the key parsed, and the database connected at startup.
@@ -209,6 +211,39 @@ node --env-file-if-exists=.env scripts/razorpay-test-run.mjs
 ```
 
 Expected: `4 of 4 checks passed`.
+
+## Confirm which commit is live
+
+The health and execute checks show that the service runs. They do not show which commit it was built from. To check that, read the build log of the production deployment.
+
+Run these on your own machine, logged in to Vercel. In PowerShell, from the repository folder:
+
+```powershell
+vercel ls parmana-connectors --prod
+vercel inspect https://<newest-production-url> --logs
+```
+
+Use the URL in the top row of the `vercel ls` output, which is the newest production deployment. In the log, the first lines name the commit Vercel cloned:
+
+```
+Cloning github.com/pavancharak/parmana-connectors (Branch: main, Commit: <sha>)
+```
+
+Compare `<sha>` with the current `main`. Fetch it first, then look at the short hash:
+
+```bash
+git fetch origin main
+git rev-parse --short origin/main
+```
+
+If `<sha>` is the same commit as `origin/main`, the live service is current.
+
+If `main` has moved on, a merge after that build started would have started a newer build. Check the newest deployment with `vercel ls`. If it has not reached `Ready`, or it failed, look at it on the **Deployments** page in the Vercel dashboard.
+
+**Notes**
+
+- `vercel inspect <url> --json` does not include the commit. Use `--logs`, as above.
+- The build log can show a `TS2688` warning. It is a known warning, and the deployment still succeeds.
 
 ## Step 7: make a change and ship it
 
