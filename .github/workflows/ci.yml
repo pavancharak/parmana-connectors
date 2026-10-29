@@ -1,15 +1,23 @@
 name: CI
 
+# Builds and tests the connectors on every push to main and every pull request.
+# It uses only the environment it sets itself, so it proves the repository builds
+# from a fresh clone with no local .env file.
+
 on:
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
   contents: read
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
+
+    # A throwaway PostgreSQL for the replay-store tests. They create and drop their own table.
     services:
       postgres:
         image: postgres:16
@@ -24,14 +32,23 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+
     env:
       PARMANA_TEST_DATABASE_URL: postgres://parmana:parmana-ci-only@127.0.0.1:5432/parmana_test
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
-      - run: npm run build
-      - run: npm test
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm test

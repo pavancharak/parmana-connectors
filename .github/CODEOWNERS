@@ -1,0 +1,15 @@
+# Code owners review changes to the paths below. GitHub applies the last
+# matching rule, so the catch-all comes first and specific paths after it.
+
+* @pavancharak
+
+# The service's trust boundary: release verification, replay protection and configuration.
+/src/service/ @pavancharak
+
+# Connectors that move money. Each new connector gets a rule here.
+/src/connectors/ @pavancharak
+
+# CI, release and supply-chain configuration.
+/.github/ @pavancharak
+/package.json @pavancharak
+/package-lock.json @pavancharak
