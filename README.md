@@ -22,6 +22,32 @@ Parmana core decides whether an action is approved, and records that decision. C
 
 This service never decides whether an action is allowed. It refuses any release that fails its checks, and it runs one connector per process, chosen by `PARMANA_CONNECTOR`.
 
+## What it does
+
+It runs the code that performs approved actions in business systems. Each vendor connector is a separate module under `src/connectors/<vendor>/`, with its own README and tests. The service runs one connector per process, chosen by `PARMANA_CONNECTOR`.
+
+| Connector | Capability | Mode |
+| --- | --- | --- |
+| Razorpay | `razorpay:refund` | Razorpay test mode only |
+| Paytm | `paytm:refund` | Paytm staging only |
+| Slack | `slack:post-message` | Not run against a live workspace yet |
+| GitHub | `github:pr-fetch`, `github:pr-merge` | GitHub App; not run against a live app yet |
+| HubSpot | `hubspot:deal-fetch`, `hubspot:deal-update` | Private App; not run against a live portal yet |
+| Zerodha | `zerodha:place-order` | Paper only; no live mode in this repository |
+
+## Current work
+
+- **Migration from parmana-core (ADR-0018).** Accepted 2 November 2026. Every connector is now on `main` here. Core has removed Zerodha and Slack. Paytm's removal is in progress in core. GitHub and HubSpot are still in core. The step-by-step status is in [STEPS.md](STEPS.md).
+- **Razorpay.** The signed-release test through the preview is the next thing to run. Then the production registration in parmana-core, with the operator as maker and Mamta as checker.
+- **Signing.** `main` requires signed commits. Each PR needs the operator's signature before merge. The commands are in [STEPS.md](STEPS.md), section 5.
+
+## Future work
+
+- Finish the registrations and removals for Paytm, GitHub and HubSpot from core, one at a time.
+- Decide the open items before any connector goes live: Slack and GitHub can repeat an action, and no connector has been run against a live system.
+- Wire Zerodha's live mode only after a separate approval and a SEBI and Zerodha sign-off, and only if the business wants it.
+- Turn on the production registrations, and only then any live traffic.
+
 ## Status
 
 | Part | State |
