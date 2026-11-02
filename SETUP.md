@@ -32,6 +32,7 @@ The functions are `api/execute.ts` (served at `/api/execute`) and `api/health.ts
 | `PARMANA_DATABASE_URL` | Secret | `postgresql://<user>:<PASSWORD>@<host>:6543/postgres` (placeholder) | Supabase project `parmana-connectors`, Connect page, Transaction pooler string, with the database password filled in. Do not use the `parmana-sandbox` project, which is production's database |
 | `SLACK_BOT_TOKEN` | Secret | `xoxb-<TOKEN>` (placeholder). Needed only when `PARMANA_CONNECTOR=slack` | Slack app settings, OAuth and Permissions, bot token. Use a test workspace until live use is approved |
 | `GITHUB_APP_CREDENTIAL` | Secret | `<APP_ID>:<INSTALLATION_ID>:<BASE64_PEM>` (placeholder). Needed only when `PARMANA_CONNECTOR=github` | GitHub App settings: its id, a generated private key, and the installation id. Use a test repository until live use is approved |
+| `HUBSPOT_PRIVATE_APP_TOKEN` | Secret | `<PRIVATE_APP_TOKEN>` (placeholder). Needed only when `PARMANA_CONNECTOR=hubspot` | HubSpot, Settings, Integrations, Private Apps. Use a test portal until live use is approved |
 | `PAYTM_MERCHANT_CREDENTIAL` | Secret | `<MERCHANT_ID>:<MERCHANT_KEY>` (placeholder). Needed only when `PARMANA_CONNECTOR=paytm`. Staging credentials only | Paytm Dashboard, staging. Use staging only until production use is approved |
 | `RAZORPAY_KEY_PAIR` | Secret | `rzp_test_<KEY_ID>:<KEY_SECRET>` (placeholder) | Razorpay Dashboard, test mode, API Keys. Use a test key only until live use is approved |
 
