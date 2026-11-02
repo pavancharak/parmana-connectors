@@ -70,23 +70,23 @@ The connector throws a `ConnectorError`. The service returns only its code, as `
 | `credential_invalid` | The key pair is malformed, or a live key is used without `PARMANA_ALLOW_LIVE_KEYS=true`. No call was made | The Vercel or local setting |
 | `unknown_capability` | The capability is not `razorpay:refund` | The release's capability |
 | `upstream_error` (Razorpay refused) | Razorpay returned an error for the list or the refund. Its code and description are in the connector's message, which the service logs | Razorpay's dashboard |
-| `upstream_error` (not reached) | The network call failed | The message says whether a refund may exist. Follow the recovery steps in [RUNBOOK.md](../RUNBOOK.md) |
+| `upstream_error` (not reached) | The network call failed | The message says whether a refund may exist. Follow the recovery steps in [RUNBOOK.md](../../../RUNBOOK.md) |
 | `timeout` | A call ran out of the time limit | As above |
 
 The message says what the operator must check:
 
 - **No refund was created.** The failure came from the list call, or the refund call never left the service. Nothing needs checking in Razorpay before the release is looked at again.
-- **A refund may have been created**, after the refund call was sent and no answer came back. The message names the receipt. Check Razorpay for a refund with that receipt before any other action, using the steps in [RUNBOOK.md](../RUNBOOK.md).
+- **A refund may have been created**, after the refund call was sent and no answer came back. The message names the receipt. Check Razorpay for a refund with that receipt before any other action, using the steps in [RUNBOOK.md](../../../RUNBOOK.md).
 
 The service refuses a resend of the same release, because the replay record already exists. A resend cannot be the way to recover.
 
 ## Test-mode run
 
-`src/connectors/razorpay/test-run.mjs` runs the connector against Razorpay's test mode from your own machine. Settings and commands are in the [README](../README.md#razorpay-test-mode-run).
+`src/connectors/razorpay/test-run.mjs` runs the connector against Razorpay's test mode from your own machine. Settings and commands are in the [README](../../../README.md#razorpay-test-mode-run).
 
 It makes one refund, checks that a repeat returns the same refund, and checks two refusals (a target that is not a payment id, and a zero amount). It refuses a key that is not `rzp_test_`, and it never prints the key. Test-mode refunds move no money.
 
-The last recorded run passed 4 of 4 checks on 29 October 2026, as noted in [RESUME.md](../RESUME.md).
+The last recorded run passed 4 of 4 checks on 29 October 2026, as noted in [RESUME.md](../../../RESUME.md).
 
 ## Not covered yet
 

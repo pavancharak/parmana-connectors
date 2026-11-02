@@ -54,7 +54,7 @@ This repository has no pull request template.
 
 ## Adding a connector
 
-Follow [README: Adding a connector](README.md#adding-a-connector). A new connector is a security change. It moves money or changes data in a business system, so it needs the owner's review and tests against a fake of the vendor's API. Document it in `docs/` as [docs/RAZORPAY.md](docs/RAZORPAY.md) does.
+Follow [README: Adding a connector](README.md#adding-a-connector). A new connector is a security change. It moves money or changes data in a business system, so it needs the owner's review and tests against a fake of the vendor's API. Document it in `src/connectors/<vendor>/README.md`, as [the Razorpay README](src/connectors/razorpay/README.md) does.
 
 ## Deployment
 
