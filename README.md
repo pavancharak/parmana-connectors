@@ -60,9 +60,10 @@ For a local run, copy `.env.example` to `.env` and fill it in. `npm start` reads
 
 | Setting | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `PARMANA_CONNECTOR` | Yes | none | The connector to run. One of: `paytm`, `razorpay`, `slack` |
+| `PARMANA_CONNECTOR` | Yes | none | The connector to run. One of: `github`, `paytm`, `razorpay`, `slack` |
 | `RAZORPAY_KEY_PAIR` | Yes, for `razorpay` | none | The Razorpay credential, `<key id>:<key secret>`. Its key id starts with `rzp_test_` or `rzp_live_` |
 | `SLACK_BOT_TOKEN` | Yes, for `slack` | none | The Slack bot token, `xoxb-...`. It needs the `chat:write` scope. The value is never shown in an error. See [the Slack README](src/connectors/slack/README.md) |
+| `GITHUB_APP_CREDENTIAL` | Yes, for `github` | none | `<app id>:<installation id>:<base64 of the App's PEM private key>`. A fresh installation token is minted for each call and never stored. See [the GitHub README](src/connectors/github/README.md) |
 | `PAYTM_MERCHANT_CREDENTIAL` | Yes, for `paytm` | none | The Paytm credential, `<merchant id>:<merchant key>`. The key must be exactly 16 bytes. The connector runs against Paytm staging only. See [the Paytm README](src/connectors/paytm/README.md) |
 | `PARMANA_ALLOW_LIVE_KEYS` | No | `false` | Accepts `rzp_live_` keys. Leave unset until a live test has been approved. Must be `true` or `false` |
 | `PARMANA_PUBLIC_KEY` | One of the two | none | Parmana's Ed25519 public key, as PEM text. Literal `\n` sequences are read as line breaks. Releases are refused unless they verify against it |
