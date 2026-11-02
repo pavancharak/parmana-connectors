@@ -4,6 +4,52 @@ Last updated 2 November 2026. This file lists what is done, what is waiting, and
 
 Background: ADR-0018 in parmana-core was accepted by the operator on 2 November 2026 (parmana-core PR #294). It moves each vendor connector out of parmana-core into this repository, one at a time, in a set order.
 
+## 0. Resume here (written 2 November 2026, end of day)
+
+Start here tomorrow.
+
+### Where things stand
+
+- **Connectors in parmana-connectors (`main`):** Razorpay, Paytm, Slack, GitHub, HubSpot, Zerodha (paper only). All merged.
+- **Removed from parmana-core:** Zerodha (#295), Slack (#296), Paytm (branch `claude/remove-paytm-from-core`, not yet a PR).
+- **Still in parmana-core:** GitHub and HubSpot.
+- **Core coverage lost:** the seven tests that exercised Paytm through core's gate (proof-audit tests 1 to 4 and their helper, and three integration tests). The operator approved deleting them. Core's gate is still covered by the remaining tests. Rewriting these against a core test connector is an open item.
+- **Nothing is live.** No live traffic, no vendor credentials in production, no live money.
+
+### Do these first tomorrow
+
+1. **Sign and open the Paytm removal PR** in parmana-core. Branch `claude/remove-paytm-from-core`, commit `1e98c81`. From `D:\last\parmana-core`:
+
+   ```bash
+   git fetch origin main
+   git fetch origin claude/remove-paytm-from-core
+   git checkout claude/remove-paytm-from-core
+   git config user.signingkey EA52495306CAD70F
+   git rebase --exec "git commit --amend --no-edit -S -s" origin/main
+   git log --format="%h %G? %s" origin/main..HEAD
+   git push --force-with-lease origin claude/remove-paytm-from-core
+   ```
+
+   Then ask Claude to open the PR. Merge it only after the signature check passes.
+
+2. **Razorpay preview test** (section 6, step 1). Needs your Vercel login and a local core. Steps are in `RESUME.md`.
+
+3. **Razorpay registration in parmana-core.** You are the maker. Mamta approves with her own key.
+
+### Remaining steps, in order
+
+- GitHub removal from core, after its registration is approved. Same process as Slack and Paytm.
+- HubSpot removal from core, after its registration is approved.
+- Rewrite the seven removed core tests against a core test connector, if you want core's gate covered by its own proof again.
+- Decide open items in section 4 before Slack or GitHub goes live.
+
+### Notes for the next session
+
+- Main in parmana-core has the unsigned Slack commit `ff324c5`, merged in PR #296. The signed copy is on the Slack branch as `f56e60c`. Nothing needs doing unless you want history rewritten, which I'd leave alone.
+- Permission checks block deleting security-sensitive tests. Ask for approval in the session before deleting tests again.
+
+---
+
 ## 1. Done
 
 ### Code in parmana-connectors (on `main`)
