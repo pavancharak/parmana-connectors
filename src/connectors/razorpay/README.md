@@ -1,6 +1,6 @@
 # Razorpay connector
 
-`src/connectors/razorpay/razorpay-connector.ts` runs one capability, `razorpay:refund`. It refunds a payment once, even when the same release is sent twice. The code is in that file, and its tests are in `tests/connectors/razorpay-connector.test.ts`.
+`src/connectors/razorpay/razorpay-connector.ts` runs one capability, `razorpay:refund`. It refunds a payment once, even when the same release is sent twice. The code is in that file, and its tests are in `tests/connectors/razorpay/razorpay-connector.test.ts`.
 
 ## Request
 
@@ -82,7 +82,7 @@ The service refuses a resend of the same release, because the replay record alre
 
 ## Test-mode run
 
-`scripts/razorpay-test-run.mjs` runs the connector against Razorpay's test mode from your own machine. Settings and commands are in the [README](../README.md#razorpay-test-mode-run).
+`src/connectors/razorpay/test-run.mjs` runs the connector against Razorpay's test mode from your own machine. Settings and commands are in the [README](../README.md#razorpay-test-mode-run).
 
 It makes one refund, checks that a repeat returns the same refund, and checks two refusals (a target that is not a payment id, and a zero amount). It refuses a key that is not `rzp_test_`, and it never prints the key. Test-mode refunds move no money.
 

@@ -4,7 +4,7 @@
 // The key is read from the environment and never printed.
 import { randomUUID } from "node:crypto";
 
-const { createRazorpayConnector } = await import("../dist/connectors/razorpay/razorpay-connector.js");
+const { createRazorpayConnector } = await import("../../../dist/connectors/razorpay/razorpay-connector.js");
 
 const key = process.env.RAZORPAY_KEY_PAIR ?? "";
 const paymentId = process.env.RAZORPAY_TEST_PAYMENT_ID ?? "";
