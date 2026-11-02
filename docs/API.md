@@ -87,7 +87,7 @@ The replay table is `parmana_connectors_nonces`. Each row keeps its key and `exp
 }
 ```
 
-`result.body` is whatever the connector returns. For `razorpay:refund` see [RAZORPAY.md](RAZORPAY.md).
+`result.body` is whatever the connector returns. For `razorpay:refund` see [the Razorpay README](../src/connectors/razorpay/README.md).
 
 `executedAt` is the time the answer was built, after the connector returned.
 
@@ -151,7 +151,7 @@ The limit is 256 KB.
 | Clock skew allowed on expiry | 30 seconds | Local service and Vercel |
 | Request headers | 10 seconds | Local service only (`server.headersTimeout`) |
 | Whole request | 30 seconds | Local service only (`server.requestTimeout`) |
-| Connector call | `PARMANA_CONNECTOR_TIMEOUT_MS`, default 10 s | The generic connector applies it to each upstream call. The Razorpay connector applies it to all of its calls for one release together, see [RAZORPAY.md](RAZORPAY.md) |
+| Connector call | `PARMANA_CONNECTOR_TIMEOUT_MS`, default 10 s | The generic connector applies it to each upstream call. The Razorpay connector applies it to all of its calls for one release together, see [the Razorpay README](../src/connectors/razorpay/README.md) |
 | Shutdown | 25 seconds for in-flight requests | Local service only |
 
 ## Logs

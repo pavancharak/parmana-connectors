@@ -4,11 +4,29 @@ Vendor connectors for [Parmana](https://github.com/pavancharak/parmana-core), an
 
 Parmana core decides whether an action may run and records the decision. This repository holds the code that performs the action. It never decides policy, and it never acts on a request that Parmana has not approved.
 
+## Why this repository exists
+
+Parmana core decides whether an action is approved, and records that decision. Core does not act in business systems, and it should not hold their credentials. This repository holds the vendor code that performs approved actions, kept apart from core so that:
+
+- core carries no vendor credentials or vendor client code;
+- a connector can be changed, deployed or replaced without a core release;
+- each connector is tested against its own vendor's API.
+
+## How it is used
+
+1. An agent or application proposes an action to parmana-core.
+2. Core evaluates the policy and any required approval. If the action is allowed, core creates a release, signed with Parmana's Ed25519 key. The release names the connector, the capability, the target and amount, an expiry, and this service as its audience.
+3. Core sends the release to this service: `POST /api/execute` on Vercel, or `POST /execute` when run locally.
+4. The service checks the release (signature, audience, capability, expiry, single use) and runs the connector once, with the connector's own credential.
+5. The result goes back to core, which checks it against the signed release.
+
+This service never decides whether an action is allowed. It refuses any release that fails its checks, and it runs one connector per process, chosen by `PARMANA_CONNECTOR`.
+
 ## Status
 
 | Part | State |
 | --- | --- |
-| Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built, tested, and running on Vercel production at `https://parmana-connectors.vercel.app` |
+| Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built and tested. Deployed to Vercel production at `https://parmana-connectors.vercel.app`, with no production traffic yet |
 | Razorpay connector (`razorpay:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 29 October 2026: 4 of 4 checks passed. Not run with live keys. No signed release has yet been run end to end through the deployed service |
 | Manifest engine (`src/manifest.ts`, `src/connector.ts`) | Built and covered by unit tests. Not used by any connector in the service yet. See [docs/MANIFEST.md](docs/MANIFEST.md) |
 | Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](RUNBOOK.md). Open items are in [RESUME.md](RESUME.md) |
@@ -20,7 +38,7 @@ Parmana core decides whether an action may run and records the decision. This re
 | --- | --- |
 | This README | What the repository is, how to run the service, and the layout |
 | [docs/API.md](docs/API.md) | The HTTP routes, the signed release, every answer, the limits and the log events |
-| [docs/RAZORPAY.md](docs/RAZORPAY.md) | The `razorpay:refund` capability: request, credential, behaviour, answer, errors |
+| [src/connectors/razorpay/README.md](src/connectors/razorpay/README.md) | The `razorpay:refund` capability: request, credential, behaviour, answer, errors |
 | [docs/MANIFEST.md](docs/MANIFEST.md) | The manifest format and engine (tested, not used by a connector yet) |
 | [SETUP.md](SETUP.md) | The Vercel project and every environment variable |
 | [RUNBOOK.md](RUNBOOK.md) | Deploying, verifying, shipping a change, troubleshooting, and recovering a release that was recorded but not confirmed |
@@ -52,7 +70,7 @@ For a local run, copy `.env.example` to `.env` and fill it in. `npm start` reads
 | `PARMANA_DATABASE_URL` | With `postgres` | none | The database for replay protection. The service creates its table on start |
 | `PARMANA_SERVICE_PORT` | No | `8080` | Port to listen on. An integer from 1 to 65535 |
 | `PARMANA_SERVICE_HOST` | No | `127.0.0.1` | Address to bind. A hosted service needs `0.0.0.0` |
-| `PARMANA_CONNECTOR_TIMEOUT_MS` | No | `10000` | Time limit for a connector call, in milliseconds (100 to 120000). For the Razorpay connector it is the total for all of its calls for one release. See [docs/RAZORPAY.md](docs/RAZORPAY.md) |
+| `PARMANA_CONNECTOR_TIMEOUT_MS` | No | `10000` | Time limit for a connector call, in milliseconds (100 to 120000). For the Razorpay connector it is the total for all of its calls for one release. See [the Razorpay README](src/connectors/razorpay/README.md) |
 
 Secrets are read from the environment. How they are placed there, whether by the host's settings or a secret manager, is a deployment decision and is not made in this repository.
 
@@ -88,14 +106,14 @@ The Vercel adapter strips the `/api` prefix and passes the request to the same h
 | `src/connector-contract.ts` | The shared contract: request, response, error and connector interface | Nothing |
 | `src/connector.ts` | The generic connector, which runs a manifest's HTTP calls. It re-exports the contract. Tested, not used by a connector yet | The contract and the manifest engine |
 | `src/manifest.ts`, `schema/manifest.schema.json` | Manifest loading and validation. Tested, not used by a connector yet | `ajv`, `yaml` |
-| `src/connectors/<vendor>/` | One folder per vendor connector | Node built-ins, its own folder, and the contract only |
+| `src/connectors/<vendor>/` | One folder per vendor: its code, its README, and any check script. Its unit test is in `tests/connectors/<vendor>/`, because the boundary test does not allow a vendor folder to import vitest | Node built-ins, its own folder, and the contract only |
 | `src/service/` | The service: configuration, release verification, replay store, HTTP server, logging, and the registry of connectors | The contract, the connector registry, and `@parmana/crypto` |
 | `src/main.ts` | The entry point for the local service | The service |
 | `api/execute.ts`, `api/health.ts` | The Vercel functions | The service |
 | `public/index.html` | The placeholder page at the site root | Nothing |
-| `scripts/razorpay-test-run.mjs` | The Razorpay test-mode check. Uses the built `dist/` | The built Razorpay connector |
+| `src/connectors/razorpay/test-run.mjs` | The Razorpay test-mode check. Uses the built `dist/` | The built Razorpay connector |
 | `tests/` | Tests for connectors, the service, the Vercel adapter, and the import rules. The PostgreSQL tests are skipped unless `PARMANA_TEST_DATABASE_URL` is set | |
-| `docs/` | The API, connector and manifest references | |
+| `docs/` | The API and manifest references. Connector references live in each connector's folder | |
 | `.github/` | CI, CodeQL, DCO, dependency review, Dependabot and code owners | |
 
 ## Rules for connectors
@@ -113,13 +131,13 @@ These rules keep connectors separate from each other and from the manifest engin
 3. Refuse anything outside what the capability allows before any call is made: wrong target, wrong amount, wrong credential format.
 4. Add its credential to `src/service/registry.ts`: the environment variable, the check, the factory, and a case in each switch. The service cannot select a connector without them.
 5. Add the connector's variable to `.env.example`, to the table in this README, and to [SETUP.md](SETUP.md). Add it to the Vercel environment as described in [RUNBOOK.md](RUNBOOK.md).
-6. Add tests under `tests/connectors/` against a fake of the vendor's API, covering the refusals, the repeat case, and an error from the vendor that does not leak the credential.
-7. Document the connector in `docs/` the way [docs/RAZORPAY.md](docs/RAZORPAY.md) does.
+6. Add tests under `tests/connectors/<vendor>/` against a fake of the vendor's API, covering the refusals, the repeat case, and an error from the vendor that does not leak the credential.
+7. Document the connector in `src/connectors/<vendor>/README.md`, the way [the Razorpay README](src/connectors/razorpay/README.md) does.
 8. Run `npm test`. The boundary test must pass.
 
 ## Razorpay connector
 
-`src/connectors/razorpay/razorpay-connector.ts` exports `createRazorpayConnector`, which implements `razorpay:refund`. It refunds a payment once: each refund carries the release's `businessTransactionId` as its receipt, and a repeat returns the existing refund instead of creating another. Refusals happen before any call to Razorpay, live keys are refused unless allowed, and the caller receives only the error code. The connector reads up to 1,000 refunds to look for an earlier one, and refuses rather than guess beyond that. A failure after a refund may have been sent says to check Razorpay before any other action. The full behaviour, its limits, the answer and the error codes are in [docs/RAZORPAY.md](docs/RAZORPAY.md).
+`src/connectors/razorpay/razorpay-connector.ts` exports `createRazorpayConnector`, which implements `razorpay:refund`. It refunds a payment once: each refund carries the release's `businessTransactionId` as its receipt, and a repeat returns the existing refund instead of creating another. Refusals happen before any call to Razorpay, live keys are refused unless allowed, and the caller receives only the error code. The connector reads up to 1,000 refunds to look for an earlier one, and refuses rather than guess beyond that. A failure after a refund may have been sent says to check Razorpay before any other action. The full behaviour, its limits, the answer and the error codes are in [its README](src/connectors/razorpay/README.md).
 
 ## Razorpay test-mode run
 
@@ -129,7 +147,7 @@ This checks the connector against Razorpay's test API. Run it on your own machin
 export RAZORPAY_KEY_PAIR="rzp_test_...:<secret>"
 export RAZORPAY_TEST_PAYMENT_ID="pay_..."
 npm ci && npm run build
-node --env-file-if-exists=.env scripts/razorpay-test-run.mjs
+node --env-file-if-exists=.env src/connectors/razorpay/test-run.mjs
 ```
 
 It creates one refund of `RAZORPAY_TEST_AMOUNT` paise (default 100), checks that a repeat returns the same refund, and checks two refusals. Test-mode refunds move no money. The script refuses anything that isn't a test key, and it never prints the key. `RAZORPAY_TEST_PAYMENT_ID` and `RAZORPAY_TEST_AMOUNT` are described in `.env.example`.
