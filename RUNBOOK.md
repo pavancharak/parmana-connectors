@@ -207,7 +207,7 @@ Find the entry with `service_not_configured`. Its `reason` names the first missi
 **Check the Razorpay path** (test mode, from your machine, with a `rzp_test_` key in `.env`):
 
 ```bash
-node --env-file-if-exists=.env scripts/razorpay-test-run.mjs
+node --env-file-if-exists=.env src/connectors/razorpay/test-run.mjs
 ```
 
 Expected: `4 of 4 checks passed`.
@@ -381,7 +381,7 @@ A merged branch may already be removed automatically. Confirm with `git ls-remot
 | List variable names | `vercel env ls production` |
 | Add a variable | `vercel env add <NAME> production` |
 | Remove a variable | `vercel env rm <NAME> production` |
-| Test-mode Razorpay checks | `node --env-file-if-exists=.env scripts/razorpay-test-run.mjs` |
+| Test-mode Razorpay checks | `node --env-file-if-exists=.env src/connectors/razorpay/test-run.mjs` |
 | Fetch Parmana's public key | `curl -s https://parmana-api-real.vercel.app/keys/default` |
 | Run tests before a push | `npm ci && npm run build && npm test` |
 | Delete a merged remote branch | `git push origin --delete <branch>` |
