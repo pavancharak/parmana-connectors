@@ -2,6 +2,23 @@
 
 Resume here. The deployment runbook is `RUNBOOK.md` and the variable list is `SETUP.md`, both on `main`.
 
+## Status on 2 November 2026: connector migration (ADR-0018)
+
+ADR-0018 in parmana-core was accepted by the operator on 2 November 2026 (parmana-core PR #294). The migration order stands. No connector has been removed from parmana-core yet. Each removal starts only after its external version is ready and registered.
+
+| Order | Connector | Where it is now | Next step |
+| --- | --- | --- | --- |
+| 1 | Razorpay refund | Module, tests and README in `src/connectors/razorpay/` (merged, PR #16). Service live on Vercel production, no production traffic | Preview signed-release test, then production registration in parmana-core (maker and checker). See the steps below |
+| 2 | Paytm refund | Not started here. Core has `packages/connector-paytm` and a forwarder through `PAYTM_CONNECTOR_URL` | Start after Razorpay is live from this repository, per ADR-0018 open question 1 |
+| 3 | Slack | Not started here. Core has `packages/connector-slack` | Not started |
+| 4 | GitHub | Not started here. Core has `packages/connector-github` | Needs code for app authentication. Not started |
+| 5 | HubSpot | Not started here. Core has `packages/connector-hubspot` | Last of the migrations. Not started |
+| 6 | Zerodha | Not started here. Core has `packages/connector-zerodha`, not registered | Remove with no migration once confirmed unused |
+
+Each step is one pull request in each repository: the module and its tests here; the registration in parmana-core, through maker and checker; then the removal from parmana-core. A step is finished only when the removal is merged and the production check passes again.
+
+Production: no traffic and no vendor credentials are configured in production (operator, 2 November 2026). Live Razorpay money stays refused until a separate approval.
+
 ## Closed on 29 October 2026
 
 - **PR #12 merged** as `748e45c`. The docs and review fixes are on `main`.
