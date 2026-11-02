@@ -46,7 +46,19 @@ describe("loadServiceConfig", () => {
 
   it("refuses a missing connector, and names the allowed ones", () => {
     expect(refusal({ PARMANA_CONNECTOR: undefined })).toBe("PARMANA_CONNECTOR is required");
-    expect(refusal({ PARMANA_CONNECTOR: "paytm" })).toBe("PARMANA_CONNECTOR must be one of: razorpay");
+    expect(refusal({ PARMANA_CONNECTOR: "stripe" })).toBe("PARMANA_CONNECTOR must be one of: paytm, razorpay");
+  });
+
+  it("accepts paytm with a valid merchant credential, and names the variable when it is missing", () => {
+    const config = loadServiceConfig(env({ PARMANA_CONNECTOR: "paytm", RAZORPAY_KEY_PAIR: undefined, PAYTM_MERCHANT_CREDENTIAL: "MERCHANT123456789:abcdefghijklmnop" }), readers);
+    expect(config).toMatchObject({ connector: "paytm" });
+    expect(refusal({ PARMANA_CONNECTOR: "paytm", RAZORPAY_KEY_PAIR: undefined, PAYTM_MERCHANT_CREDENTIAL: undefined })).toBe("PAYTM_MERCHANT_CREDENTIAL is required");
+  });
+
+  it("refuses a paytm merchant key that is not 16 bytes, without echoing it", () => {
+    const message = refusal({ PARMANA_CONNECTOR: "paytm", RAZORPAY_KEY_PAIR: undefined, PAYTM_MERCHANT_CREDENTIAL: "MERCHANT123:short-key" });
+    expect(message).toContain("PAYTM_MERCHANT_CREDENTIAL cannot be used");
+    expect(message).not.toContain("short-key");
   });
 
   it("refuses a missing credential, naming the variable and not a value", () => {
