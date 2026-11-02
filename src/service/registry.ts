@@ -1,12 +1,13 @@
 import type { GenericConnector } from "../connector-contract.js";
 import { createPaytmConnector, parsePaytmCredential } from "../connectors/paytm/paytm-connector.js";
+import { createSlackConnector, parseSlackBotToken } from "../connectors/slack/slack-connector.js";
 import { assertRazorpayCredential, createRazorpayConnector } from "../connectors/razorpay/razorpay-connector.js";
 
 /**
  * The connectors this service can run. Adding one means adding a case to each
  * switch below, so a connector cannot be selected without its credential rules.
  */
-export const CONNECTOR_NAMES = ["paytm", "razorpay"] as const;
+export const CONNECTOR_NAMES = ["paytm", "razorpay", "slack"] as const;
 
 export type ConnectorName = (typeof CONNECTOR_NAMES)[number];
 
@@ -21,6 +22,8 @@ export function credentialVariableFor(name: ConnectorName): string {
       return "PAYTM_MERCHANT_CREDENTIAL";
     case "razorpay":
       return "RAZORPAY_KEY_PAIR";
+    case "slack":
+      return "SLACK_BOT_TOKEN";
   }
 }
 
@@ -33,6 +36,9 @@ export function assertCredentialUsable(name: ConnectorName, value: string, allow
     case "razorpay":
       assertRazorpayCredential(value, allowLiveKeys);
       return;
+    case "slack":
+      parseSlackBotToken(value);
+      return;
   }
 }
 
@@ -44,5 +50,7 @@ export function createConnector(name: ConnectorName, options: { readonly allowLi
       return createPaytmConnector({ environment: "staging", allowProduction: false });
     case "razorpay":
       return createRazorpayConnector({ allowLiveKeys: options.allowLiveKeys });
+    case "slack":
+      return createSlackConnector();
   }
 }
