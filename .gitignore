@@ -7,3 +7,8 @@ dist/
 !.env.example
 keys/
 *.pem
+
+# Operator status and registration notes (local only)
+RESUME.md
+RESUME-STATUS.md
+REGISTRATIONS-PENDING.md

@@ -29,9 +29,9 @@ This service never decides whether an action is allowed. It refuses any release 
 | Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built and tested. Deployed to Vercel production at `https://parmana-connectors.vercel.app`, with no production traffic yet |
 | Razorpay connector (`razorpay:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 29 October 2026: 4 of 4 checks passed. Not run with live keys. No signed release has yet been run end to end through the deployed service |
 | Manifest engine (`src/manifest.ts`, `src/connector.ts`) | Built and covered by unit tests. Not used by any connector in the service yet. See [docs/MANIFEST.md](docs/MANIFEST.md) |
-| Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](RUNBOOK.md). Open items are in [RESUME.md](RESUME.md) |
+| Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](RUNBOOK.md). Open items are kept by the operator, outside this repository |
 | Live money | Off. Live keys are refused unless the service is started with `PARMANA_ALLOW_LIVE_KEYS=true` |
-| Migration out of parmana-core (ADR-0018), as of 3 November 2026 | Six connector folders on `main`: Razorpay, Paytm, Slack, GitHub, HubSpot, Zerodha (paper only, no live mode). Removed from parmana-core: Zerodha (#295), Slack (#296), Paytm (#297), GitHub (#299), HubSpot (#300). Registrations in parmana-core still open: Razorpay, GitHub, HubSpot, Slack. Paytm needs none. Status in [RESUME-STATUS.md](RESUME-STATUS.md); the registration steps in [REGISTRATIONS-PENDING.md](REGISTRATIONS-PENDING.md) |
+| Migration out of parmana-core (ADR-0018), as of 3 November 2026 | Six connector folders on `main`: Razorpay, Paytm, Slack, GitHub, HubSpot, Zerodha (paper only, no live mode). Removed from parmana-core: Zerodha (#295), Slack (#296), Paytm (#297), GitHub (#299), HubSpot (#300). Registrations in parmana-core still open: Razorpay, GitHub, HubSpot, Slack. Paytm needs none. Status in RESUME-STATUS.md (kept by the operator); the registration steps in REGISTRATIONS-PENDING.md (kept by the operator) |
 
 ## Documentation
 
@@ -43,7 +43,6 @@ This service never decides whether an action is allowed. It refuses any release 
 | [docs/MANIFEST.md](docs/MANIFEST.md) | The manifest format and engine (tested, not used by a connector yet) |
 | [SETUP.md](SETUP.md) | The Vercel project and every environment variable |
 | [RUNBOOK.md](RUNBOOK.md) | Deploying, verifying, shipping a change, troubleshooting, and recovering a release that was recorded but not confirmed |
-| [RESUME.md](RESUME.md) | Current status and open items, with owners |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Branches, sign-off, checks, CI and how to add a connector |
 | [SECURITY.md](SECURITY.md) | How to report a vulnerability |
 

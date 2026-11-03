@@ -18,7 +18,7 @@ Start here tomorrow.
 
 ### Do these first tomorrow
 
-1. **Razorpay preview test** (section 6, step 1). Needs your Vercel login and a local core. Steps are in `RESUME.md`.
+1. **Razorpay preview test** (section 6, step 1). Needs your Vercel login and a local core. Steps are in the operator's status notes.
 
 2. **Razorpay registration in parmana-core.** You are the maker. Mamta approves with her own key.
 
@@ -52,7 +52,7 @@ Each connector is in its own folder under `src/connectors/<vendor>/`, with its R
 
 ### Documents
 
-- `RESUME.md` has the migration status section (PR #17).
+- The operator's status notes (kept outside this repository) have the migration status section (PR #17).
 - ADR-0018 is accepted (parmana-core PR #294).
 
 ### Removal from parmana-core
@@ -70,7 +70,7 @@ Registration in parmana-core is a maker and checker step. The maker is the opera
 
 | Step | Who | Status |
 | --- | --- | --- |
-| Razorpay signed-release test through the preview | operator (needs Vercel login and a local core) | not run. Steps are in `RESUME.md` |
+| Razorpay signed-release test through the preview | operator (needs Vercel login and a local core) | not run. Steps are in the operator's status notes |
 | Razorpay production registration in parmana-core | operator (maker), Mamta (checker) | open |
 | Paytm registration | operator, Mamta | not needed: Paytm was removed from core (#297) |
 | Slack registration | operator, Mamta | open |
@@ -106,7 +106,7 @@ Replace `<branch>` with the PR's branch. The `git log` should show only that PR'
 
 ## 6. Next steps, in order
 
-1. Run the Razorpay preview test in `RESUME.md`, and record the result.
+1. Run the Razorpay preview test in the operator's status notes, and record the result.
 2. Check the live registrations in parmana-core. Record which connectors are registered.
 3. Prepare the Razorpay registration request. The operator makes it. Mamta approves it with her own key.
 4. After Razorpay is approved and live-checked, get Mamta's approval for the GitHub and HubSpot registrations. No further production connector needs removing from core. The SDK's sample connectors are not in the migration order and are not moved.
