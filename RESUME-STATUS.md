@@ -25,6 +25,18 @@ Status as of 3 November 2026. Read this first when you come back to this work. S
 - [ ] Decide whether the SDK's sample vendor connectors (Oracle, Salesforce, SAP, Workday) stay in parmana-core. They are not in the migration order.
 - [ ] The Python `dilithium3` work in parmana-verifier has no PR and needs re-signing. Tracked by parmana-verifier #27 and #28.
 
+## Recommended order
+
+Do these in order. Each step depends on the one before it. The registration steps are in parmana-core `docs/REGISTRATIONS-PENDING.md`.
+
+1. **Confirm the registration mechanism with Mamta.** This is the first step. Nothing else starts until she agrees that a registration is the policy approval in parmana-core `docs/runbooks/POLICY-CHANGE-APPROVAL.md`, or until a different process is agreed. Record the decision here.
+2. **Run the Razorpay preview signed-release test.** It needs a Vercel login and a local core, so the operator runs it. Record the result here.
+3. **Register Razorpay only.** Stop and review before any other connector.
+4. **Decide, for each of GitHub, HubSpot and Slack, whether it should run at all.** Their code is already out of core. Only after that decision, propose its registration.
+5. **Optional, not blocking:** rewrite the seven core gate tests removed with Paytm, against a core test connector. Decide whether the SDK's four sample vendor connectors stay in parmana-core. Open the parmana-verifier `dilithium3` PR (issues #27 and #28).
+
+Live money stays off until each connector has its own approval.
+
 ## Why
 
 Each vendor connector runs in its own repo, so its code and credentials stay outside the core. A registration in core is then a separate, reviewed step, with a maker and a checker.
