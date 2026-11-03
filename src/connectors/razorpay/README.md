@@ -86,7 +86,7 @@ The service refuses a resend of the same release, because the replay record alre
 
 It makes one refund, checks that a repeat returns the same refund, and checks two refusals (a target that is not a payment id, and a zero amount). It refuses a key that is not `rzp_test_`, and it never prints the key. Test-mode refunds move no money.
 
-The last recorded run passed 4 of 4 checks on 29 October 2026, as noted in [RESUME.md](../../../RESUME.md).
+The last recorded run passed 4 of 4 checks on 29 October 2026, as noted in the operator's status notes.
 
 ## Not covered yet
 
