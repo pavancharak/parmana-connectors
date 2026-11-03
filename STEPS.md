@@ -4,7 +4,7 @@ Last updated 3 November 2026. This file lists what is done, what is waiting, and
 
 Background: ADR-0018 in parmana-core was accepted by the operator on 2 November 2026 (parmana-core PR #294). It moves each vendor connector out of parmana-core into this repository, one at a time, in a set order.
 
-## 0. Resume here (written 2 November 2026, end of day)
+## 0. Resume here (written 2 November 2026, end of day; status updated 3 November 2026)
 
 Start here tomorrow.
 
@@ -62,7 +62,7 @@ Each connector is in its own folder under `src/connectors/<vendor>/`, with its R
 
 ## 2. Still in parmana-core
 
-None. No vendor connector is in parmana-core any more. Razorpay, Paytm, Slack, GitHub, HubSpot and Zerodha each have one copy, in parmana-connectors.
+No production vendor connector is in parmana-core. The connector SDK (`packages/connector-sdk`) still ships four sample vendor connectors (Oracle, Salesforce, SAP, Workday), which are not in the migration order. Razorpay, Paytm, Slack, GitHub, HubSpot and Zerodha each have one copy, in parmana-connectors.
 
 ## 3. Waiting on people, not code
 
@@ -109,6 +109,6 @@ Replace `<branch>` with the PR's branch. The `git log` should show only that PR'
 1. Run the Razorpay preview test in `RESUME.md`, and record the result.
 2. Check the live registrations in parmana-core. Record which connectors are registered.
 3. Prepare the Razorpay registration request. The operator makes it. Mamta approves it with her own key.
-4. After Razorpay is approved and live-checked, get Mamta's approval for the GitHub and HubSpot registrations. No further removal from core is needed.
+4. After Razorpay is approved and live-checked, get Mamta's approval for the GitHub and HubSpot registrations. No further production connector needs removing from core. The SDK's sample connectors are not in the migration order and are not moved.
 5. Decide the open items in section 4 before Slack or GitHub goes live.
 6. Keep live money off until there is a separate approval for each connector.
