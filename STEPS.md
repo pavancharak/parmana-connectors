@@ -1,6 +1,6 @@
 # Connector migration: steps to resume
 
-Last updated 2 November 2026. This file lists what is done, what is waiting, and what to do next. Read it first when you come back to this work.
+Last updated 3 November 2026. This file lists what is done, what is waiting, and what to do next. Read it first when you come back to this work.
 
 Background: ADR-0018 in parmana-core was accepted by the operator on 2 November 2026 (parmana-core PR #294). It moves each vendor connector out of parmana-core into this repository, one at a time, in a set order.
 
@@ -11,8 +11,8 @@ Start here tomorrow.
 ### Where things stand
 
 - **Connectors in parmana-connectors (`main`):** Razorpay, Paytm, Slack, GitHub, HubSpot, Zerodha (paper only). All merged.
-- **Removed from parmana-core:** Zerodha (parmana-core #295), Slack (#296), Paytm (#297), all merged.
-- **Still in parmana-core:** GitHub and HubSpot.
+- **Removed from parmana-core:** Zerodha (parmana-core #295), Slack (#296), Paytm (#297), GitHub (#299), HubSpot (#300), all merged.
+- **Still in parmana-core:** no vendor connector.
 - **Core coverage lost (operator approved):** the seven tests that exercised Paytm through core's gate, the approval-email integration test, and the offline check that ran a Paytm refund through the stack. Rewriting the gate tests against a core test connector is open.
 - **Nothing is live.** No live traffic, no vendor credentials in production, no live money.
 
@@ -24,8 +24,7 @@ Start here tomorrow.
 
 ### Remaining steps, in order
 
-- GitHub removal from core, after its registration is approved. Same process as Slack and Paytm.
-- HubSpot removal from core, after its registration is approved.
+- GitHub and HubSpot were removed from core before their registrations were approved (operator's decision). Their registrations are still open, so neither can run live yet.
 - Rewrite the seven removed core tests against a core test connector, if you want core's gate covered by its own proof again.
 - Decide open items in section 4 before Slack or GitHub goes live.
 
@@ -59,16 +58,11 @@ Each connector is in its own folder under `src/connectors/<vendor>/`, with its R
 ### Removal from parmana-core
 
 - Zerodha: removed from parmana-core (parmana-core PR #295, merged 19:01 UTC, 2 November 2026). This happened before parmana-connectors PR #22 merged, so for about three minutes the code existed only in git history. It is now on `main` in parmana-connectors.
+- Slack (parmana-core PR #296), Paytm (#297), GitHub (#299) and HubSpot (#300) were also removed. All four are merged, and each now lives in parmana-connectors.
 
 ## 2. Still in parmana-core
 
-These are still in parmana-core, with their code running there:
-
-- Slack (`packages/connector-slack`, `GatewaySlackAdapter`)
-- GitHub (`packages/connector-github`, `GatewayGitHubAdapter`)
-- HubSpot (`packages/connector-hubspot`, `GatewayHubSpotAdapter`)
-
-Razorpay is not in parmana-core. Its only copy is in parmana-connectors.
+None. No vendor connector is in parmana-core any more. Razorpay, Paytm, Slack, GitHub, HubSpot and Zerodha each have one copy, in parmana-connectors.
 
 ## 3. Waiting on people, not code
 
@@ -115,6 +109,6 @@ Replace `<branch>` with the PR's branch. The `git log` should show only that PR'
 1. Run the Razorpay preview test in `RESUME.md`, and record the result.
 2. Check the live registrations in parmana-core. Record which connectors are registered.
 3. Prepare the Razorpay registration request. The operator makes it. Mamta approves it with her own key.
-4. After Razorpay is approved and live-checked, prepare Paytm, then Slack, GitHub and HubSpot, one at a time. For each: registration, approval, then a removal PR in parmana-core.
+4. After Razorpay is approved and live-checked, get Mamta's approval for the GitHub and HubSpot registrations. No further removal from core is needed.
 5. Decide the open items in section 4 before Slack or GitHub goes live.
 6. Keep live money off until there is a separate approval for each connector.
