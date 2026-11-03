@@ -11,30 +11,16 @@ Start here tomorrow.
 ### Where things stand
 
 - **Connectors in parmana-connectors (`main`):** Razorpay, Paytm, Slack, GitHub, HubSpot, Zerodha (paper only). All merged.
-- **Removed from parmana-core:** Zerodha (#295), Slack (#296), Paytm (branch `claude/remove-paytm-from-core`, not yet a PR).
+- **Removed from parmana-core:** Zerodha (parmana-core #295), Slack (#296), Paytm (#297), all merged.
 - **Still in parmana-core:** GitHub and HubSpot.
-- **Core coverage lost:** the seven tests that exercised Paytm through core's gate (proof-audit tests 1 to 4 and their helper, and three integration tests). The operator approved deleting them. Core's gate is still covered by the remaining tests. Rewriting these against a core test connector is an open item.
+- **Core coverage lost (operator approved):** the seven tests that exercised Paytm through core's gate, the approval-email integration test, and the offline check that ran a Paytm refund through the stack. Rewriting the gate tests against a core test connector is open.
 - **Nothing is live.** No live traffic, no vendor credentials in production, no live money.
 
 ### Do these first tomorrow
 
-1. **Sign and open the Paytm removal PR** in parmana-core. Branch `claude/remove-paytm-from-core`, commit `1e98c81`. From `D:\last\parmana-core`:
+1. **Razorpay preview test** (section 6, step 1). Needs your Vercel login and a local core. Steps are in `RESUME.md`.
 
-   ```bash
-   git fetch origin main
-   git fetch origin claude/remove-paytm-from-core
-   git checkout claude/remove-paytm-from-core
-   git config user.signingkey EA52495306CAD70F
-   git rebase --exec "git commit --amend --no-edit -S -s" origin/main
-   git log --format="%h %G? %s" origin/main..HEAD
-   git push --force-with-lease origin claude/remove-paytm-from-core
-   ```
-
-   Then ask Claude to open the PR. Merge it only after the signature check passes.
-
-2. **Razorpay preview test** (section 6, step 1). Needs your Vercel login and a local core. Steps are in `RESUME.md`.
-
-3. **Razorpay registration in parmana-core.** You are the maker. Mamta approves with her own key.
+2. **Razorpay registration in parmana-core.** You are the maker. Mamta approves with her own key.
 
 ### Remaining steps, in order
 
@@ -78,7 +64,6 @@ Each connector is in its own folder under `src/connectors/<vendor>/`, with its R
 
 These are still in parmana-core, with their code running there:
 
-- Paytm (`packages/connector-paytm`, `GatewayPaytmAdapter`)
 - Slack (`packages/connector-slack`, `GatewaySlackAdapter`)
 - GitHub (`packages/connector-github`, `GatewayGitHubAdapter`)
 - HubSpot (`packages/connector-hubspot`, `GatewayHubSpotAdapter`)
@@ -93,7 +78,7 @@ Registration in parmana-core is a maker and checker step. The maker is the opera
 | --- | --- | --- |
 | Razorpay signed-release test through the preview | operator (needs Vercel login and a local core) | not run. Steps are in `RESUME.md` |
 | Razorpay production registration in parmana-core | operator (maker), Mamta (checker) | open |
-| Paytm registration | operator, Mamta | open |
+| Paytm registration | operator, Mamta | not needed: Paytm was removed from core (#297) |
 | Slack registration | operator, Mamta | open |
 | GitHub registration | operator, Mamta | open |
 | HubSpot registration | operator, Mamta | open |
