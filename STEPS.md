@@ -18,7 +18,7 @@ Start here tomorrow.
 
 ### Do these first tomorrow
 
-1. **Razorpay preview test** (section 6, step 1). Needs your Vercel login and a local core. Steps are in the operator's status notes.
+1. **Razorpay preview test** (section 6, step 1). Needs your Vercel login and a local core. The steps are in this guide.
 
 2. **Razorpay registration in parmana-core.** You are the maker. Mamta approves with her own key.
 
@@ -52,7 +52,7 @@ Each connector is in its own folder under `src/connectors/<vendor>/`, with its R
 
 ### Documents
 
-- The operator's status notes (kept outside this repository) have the migration status section (PR #17).
+- The migration status is recorded in the README, under Status.
 - ADR-0018 is accepted (parmana-core PR #294).
 
 ### Removal from parmana-core
