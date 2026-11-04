@@ -113,6 +113,13 @@ No policy for these capabilities ships in this repository. Write one in `parmana
 - **Direct access:** a Zoho call made outside Parmana is not checked or recorded.
 - **Token exposure:** on a shared host, code that can read the server's environment can read the token. Run the connector on a host you control.
 
+## Not done or not verified
+
+- **Live Zoho Books:** the request shapes have not been checked against a live Zoho Books organization. The first production run is a test.
+- **Zoho policy:** no Zoho policy is in `parmana-core` yet. One must be written before any release.
+- **Duplicate check:** there is no duplicate check before create. The `reference_number` check is the only protection against a second invoice, and it relies on the operator.
+- **Commit trailer:** the commit that added this connector names Claude without a model number, because the repo's instructions don't allow model identifiers in commits.
+
 ## Operations
 
 - **Rotate the token:** create a new access token, update `ZOHO_ACCESS_TOKEN`, redeploy, then revoke the old token in Zoho.
