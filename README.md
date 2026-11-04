@@ -60,7 +60,9 @@ For a local run, copy `.env.example` to `.env` and fill it in. `npm start` reads
 
 | Setting | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `PARMANA_CONNECTOR` | Yes | none | The connector to run. One of: `github`, `hubspot`, `paytm`, `razorpay`, `slack` |
+| `PARMANA_CONNECTOR` | Yes | none | The connector to run. One of: `github`, `hubspot`, `paytm`, `razorpay`, `slack`, `zoho` |
+| `ZOHO_ACCESS_TOKEN` | Yes, for `zoho` | none | A Zoho OAuth access token. It is sent only in the `Zoho-oauthtoken` header, and the value is never shown in an error. See [the Zoho README](src/connectors/zoho/README.md) |
+| `ZOHO_ORGANIZATION_ID` | Yes, for `zoho` | none | The Zoho Books organization id, digits only. The service refuses to start without it |
 | `RAZORPAY_KEY_PAIR` | Yes, for `razorpay` | none | The Razorpay credential, `<key id>:<key secret>`. Its key id starts with `rzp_test_` or `rzp_live_` |
 | `SLACK_BOT_TOKEN` | Yes, for `slack` | none | The Slack bot token, `xoxb-...`. It needs the `chat:write` scope. The value is never shown in an error. See [the Slack README](src/connectors/slack/README.md) |
 | `GITHUB_APP_CREDENTIAL` | Yes, for `github` | none | `<app id>:<installation id>:<base64 of the App's PEM private key>`. A fresh installation token is minted for each call and never stored. See [the GitHub README](src/connectors/github/README.md) |

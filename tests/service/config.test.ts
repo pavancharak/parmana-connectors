@@ -46,7 +46,7 @@ describe("loadServiceConfig", () => {
 
   it("refuses a missing connector, and names the allowed ones", () => {
     expect(refusal({ PARMANA_CONNECTOR: undefined })).toBe("PARMANA_CONNECTOR is required");
-    expect(refusal({ PARMANA_CONNECTOR: "stripe" })).toBe("PARMANA_CONNECTOR must be one of: github, hubspot, paytm, razorpay, slack");
+    expect(refusal({ PARMANA_CONNECTOR: "stripe" })).toBe("PARMANA_CONNECTOR must be one of: github, hubspot, paytm, razorpay, slack, zoho");
   });
 
   it("accepts paytm with a valid merchant credential, and names the variable when it is missing", () => {
