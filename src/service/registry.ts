@@ -4,12 +4,13 @@ import { createHubSpotConnector, parseHubSpotPrivateAppToken } from "../connecto
 import { createPaytmConnector, parsePaytmCredential } from "../connectors/paytm/paytm-connector.js";
 import { createSlackConnector, parseSlackBotToken } from "../connectors/slack/slack-connector.js";
 import { assertRazorpayCredential, createRazorpayConnector } from "../connectors/razorpay/razorpay-connector.js";
+import { createZohoConnector, parseZohoAccessToken } from "../connectors/zoho/zoho-connector.js";
 
 /**
  * The connectors this service can run. Adding one means adding a case to each
  * switch below, so a connector cannot be selected without its credential rules.
  */
-export const CONNECTOR_NAMES = ["github", "hubspot", "paytm", "razorpay", "slack"] as const;
+export const CONNECTOR_NAMES = ["github", "hubspot", "paytm", "razorpay", "slack", "zoho"] as const;
 
 export type ConnectorName = (typeof CONNECTOR_NAMES)[number];
 
@@ -30,6 +31,8 @@ export function credentialVariableFor(name: ConnectorName): string {
       return "RAZORPAY_KEY_PAIR";
     case "slack":
       return "SLACK_BOT_TOKEN";
+    case "zoho":
+      return "ZOHO_ACCESS_TOKEN";
   }
 }
 
@@ -51,6 +54,9 @@ export function assertCredentialUsable(name: ConnectorName, value: string, allow
     case "slack":
       parseSlackBotToken(value);
       return;
+    case "zoho":
+      parseZohoAccessToken(value);
+      return;
   }
 }
 
@@ -68,5 +74,8 @@ export function createConnector(name: ConnectorName, options: { readonly allowLi
       return createRazorpayConnector({ allowLiveKeys: options.allowLiveKeys });
     case "slack":
       return createSlackConnector();
+    case "zoho":
+      // The organization id is not a secret, but it must be set. The connector refuses to start without it.
+      return createZohoConnector({ organizationId: process.env["ZOHO_ORGANIZATION_ID"] ?? "" });
   }
 }
