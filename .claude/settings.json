@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(cp /root/.claude/stop-hook-git-check.sh*)",
-      "Bash(grep * /root/.claude/stop-hook-git-check.sh)"
-    ]
-  }
-}
