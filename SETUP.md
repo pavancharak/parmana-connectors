@@ -42,6 +42,16 @@ Leave these unset:
 - `PARMANA_CONNECTOR_TIMEOUT_MS`. The default of 10000 ms applies.
 - `PARMANA_SERVICE_PORT` and `PARMANA_SERVICE_HOST`. Vercel does not use them.
 
+## Check the configuration before deploying
+
+The function returns a generic `500 {"error":"service is not configured"}` when its settings fail to load. The reason is only in the Vercel function logs, as `service_not_configured`. To find the problem before a deploy, run the same loader locally with the values you plan to use:
+
+```bash
+npm run check:config
+```
+
+It prints `Configuration OK` and a summary with no secret values, or the first setting that is missing or invalid. It reads the environment of the shell it runs in, so load the values first, for example from a local `.env` file (not committed). The check does not contact Razorpay or the database.
+
 ## Setting a variable
 
 Run from the repository folder. Each command prompts for the value, so the value is not written into the command:

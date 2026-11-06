@@ -11,7 +11,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "start": "node --env-file-if-exists=.env dist/main.js"
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "check:config": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/service/check-config-cli.js"
   },
   "license": "Apache-2.0",
   "dependencies": {
