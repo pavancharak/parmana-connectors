@@ -185,6 +185,25 @@ describe("refund proposed from Google AX", () => {
     expect(h.calls).toHaveLength(0);
   });
 
+  it("never returns the connector's credential to the caller, on success or failure", async () => {
+    const h = await ready();
+    const ok = await submitToConnector(h.base, signed(release({ target: TARGET, parameters: { amount: 75_000 } })));
+    const okText = await ok.text();
+    // A release for a target the connector does not accept makes it fail.
+    const failed = await submitToConnector(h.base, signed(release({ target: "pay_other" })));
+    const failText = await failed.text();
+    expect(okText).not.toContain(SECRET);
+    expect(failText).not.toContain(SECRET);
+  });
+
+  it("the agent's request carries only the signed release, with no credential", async () => {
+    const h = await ready();
+    const body = signed(release({ target: TARGET }));
+    const serialized = JSON.stringify(body);
+    expect(serialized).not.toContain(SECRET);
+    expect(Object.keys(body).sort()).toEqual(["release", "signature"]);
+  });
+
   it("refuses a body that is not a signed release, and runs nothing", async () => {
     const h = await ready();
     const response = await submitToConnector(h.base, { hello: "agent" });

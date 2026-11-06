@@ -22,6 +22,13 @@ parmana-core does.
 | Release lasting longer than 60 s | Refused, connector not run |
 | Capability this connector does not serve | Refused, connector not run |
 | Body that is not a signed release | Refused with 400, connector not run |
+| Connector credential in a success or failure response | Never returned to the caller |
+| Agent's request body | Contains only `release` and `signature`, no credential |
+
+Credential isolation depends on the deployment as well: the agent's sandbox
+must not hold the payment credential, in its environment, its files or its
+workspace. That is a setting of the AX deployment, and this test cannot check
+it.
 
 ## What it does not test
 
