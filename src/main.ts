@@ -4,8 +4,13 @@ import { Pool } from "pg";
 
 import { ConfigError, loadServiceConfig } from "./service/config.js";
 import { log } from "./service/log.js";
-import { CREATE_NONCE_TABLE_SQL, MemoryNonceStore, PostgresNonceStore, type NonceStore } from "./service/nonce-store.js";
 import { createConnector } from "./service/registry.js";
+import {
+  CREATE_RELEASE_LEDGER_SQL,
+  MemoryReleaseLedger,
+  PostgresReleaseLedger,
+  type ReleaseLedger,
+} from "./service/release-ledger.js";
 import { createService } from "./service/server.js";
 
 /** How long in-flight requests may take to finish after a shutdown signal, in milliseconds. */
@@ -17,21 +22,21 @@ async function main(): Promise<void> {
   });
 
   let pool: Pool | undefined;
-  let nonceStore: NonceStore;
+  let releaseLedger: ReleaseLedger;
   if (config.nonceStore === "postgres") {
     pool = new Pool({ connectionString: config.databaseUrl });
-    await pool.query(CREATE_NONCE_TABLE_SQL);
-    nonceStore = new PostgresNonceStore(pool);
+    await pool.query(CREATE_RELEASE_LEDGER_SQL);
+    releaseLedger = new PostgresReleaseLedger(pool);
   } else {
     log("nonce_store_memory", { warning: "replay protection is per process" });
-    nonceStore = new MemoryNonceStore();
+    releaseLedger = new MemoryReleaseLedger();
   }
 
   const credentialVariable = config.credentialVariable;
   const service = createService({
     publicKey: config.publicKey,
     audience: config.audience,
-    nonceStore,
+    releaseLedger,
     connector: createConnector(config.connector, { allowLiveKeys: config.allowLiveKeys }),
     credentialId: credentialVariable,
     resolveCredential: () => {

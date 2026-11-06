@@ -4,8 +4,8 @@ import type { KeyObject } from "node:crypto";
 import { ConnectorError, type GenericConnector } from "../connector-contract.js";
 
 import { log } from "./log.js";
-import type { NonceStore } from "./nonce-store.js";
-import { isSignedExternalRelease, verifyExternalRelease, type ExternalRelease } from "./release.js";
+import type { ReleaseLedger } from "./release-ledger.js";
+import { checkExternalRelease, isSignedExternalRelease, type ExternalRelease } from "./release.js";
 
 /** Largest result returned to parmana-core, in bytes. Parmana refuses anything larger. */
 const RESULT_LIMIT_BYTES = 16 * 1024;
@@ -16,7 +16,8 @@ const LOG_DETAIL_LIMIT = 300;
 export interface ServiceOptions {
   readonly publicKey: KeyObject;
   readonly audience: string;
-  readonly nonceStore: NonceStore;
+  /** Records each release and its first answer. Must be shared across instances. */
+  readonly releaseLedger: ReleaseLedger;
   readonly connector: GenericConnector;
   /** The name the credential is listed under, for the credential handle. */
   readonly credentialId: string;
@@ -53,24 +54,30 @@ export function createService(options: ServiceOptions) {
       return send(res, 400, { error: "request body is not a signed release" });
     }
 
-    let check;
-    try {
-      check = await verifyExternalRelease(body, {
-        publicKey: options.publicKey,
-        audience: options.audience,
-        capabilities: options.connector.capabilities,
-        now: now(),
-        nonceStore: options.nonceStore,
-      });
-    } catch {
-      // The replay store is unavailable. Nothing has run, so the caller may retry the same release.
-      log("release_check_unavailable");
-      return send(res, 500, { error: "internal error" });
-    }
-
+    const check = await checkExternalRelease(body, {
+      publicKey: options.publicKey,
+      audience: options.audience,
+      capabilities: options.connector.capabilities,
+      now: now(),
+    });
     if (!check.valid) {
       log("release_refused", { reasons: check.errors.length });
       return send(res, 403, { error: "release refused", errors: check.errors });
+    }
+
+    // A repeat gets the first answer, and the connector does not run again (G-132).
+    let claim;
+    try {
+      claim = await options.releaseLedger.claim(check.release.businessTransactionId, check.release.expiresAt);
+    } catch {
+      // The ledger is unavailable. Nothing has run, so the caller may retry the same release.
+      log("release_check_unavailable");
+      return send(res, 500, { error: "internal error" });
+    }
+    if (!claim.claimed) {
+      log("release_repeated", { businessTransactionId: check.release.businessTransactionId, capability: check.release.capability });
+      if (claim.answer !== undefined) return send(res, 200, claim.answer);
+      return send(res, 409, { error: "this release is already being executed; retry later" });
     }
 
     return answer(check.release, res);
@@ -117,13 +124,21 @@ export function createService(options: ServiceOptions) {
     }
 
     log("release_answered", { businessTransactionId: release.businessTransactionId, capability: release.capability, success });
-    return send(res, 200, {
+    const body = {
       businessTransactionId: release.businessTransactionId,
       capability: release.capability,
       success,
       result,
       executedAt: new Date().toISOString(),
-    });
+    };
+    try {
+      await options.releaseLedger.complete(release.businessTransactionId, body);
+    } catch {
+      // The connector has run and the answer is in hand. A repeat finds the claim without an
+      // answer and gets 409, so nothing runs twice. An operator resolves it.
+      log("release_answer_not_stored", { businessTransactionId: release.businessTransactionId });
+    }
+    return send(res, 200, body);
   }
 
   return {

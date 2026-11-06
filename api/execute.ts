@@ -5,8 +5,13 @@ import { Pool } from "pg";
 
 import { loadServiceConfig } from "../src/service/config.js";
 import { log } from "../src/service/log.js";
-import { CREATE_NONCE_TABLE_SQL, MemoryNonceStore, PostgresNonceStore, type NonceStore } from "../src/service/nonce-store.js";
 import { createConnector } from "../src/service/registry.js";
+import {
+  CREATE_RELEASE_LEDGER_SQL,
+  MemoryReleaseLedger,
+  PostgresReleaseLedger,
+  type ReleaseLedger,
+} from "../src/service/release-ledger.js";
 import { createService } from "../src/service/server.js";
 
 type Handle = ReturnType<typeof createService>["handle"];
@@ -30,20 +35,20 @@ async function build(): Promise<Handle> {
     readFile: (path) => readFileSync(path, "utf8"),
   });
 
-  let nonceStore: NonceStore;
+  let releaseLedger: ReleaseLedger;
   if (config.nonceStore === "postgres") {
     const pool = new Pool({ connectionString: config.databaseUrl, max: 1 });
-    await pool.query(CREATE_NONCE_TABLE_SQL);
-    nonceStore = new PostgresNonceStore(pool);
+    await pool.query(CREATE_RELEASE_LEDGER_SQL);
+    releaseLedger = new PostgresReleaseLedger(pool);
   } else {
-    nonceStore = new MemoryNonceStore();
+    releaseLedger = new MemoryReleaseLedger();
   }
 
   const credentialVariable = config.credentialVariable;
   const service = createService({
     publicKey: config.publicKey,
     audience: config.audience,
-    nonceStore,
+    releaseLedger,
     connector: createConnector(config.connector, { allowLiveKeys: config.allowLiveKeys }),
     credentialId: credentialVariable,
     resolveCredential: () => {

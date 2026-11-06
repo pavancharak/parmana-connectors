@@ -1,21 +1,22 @@
+import { createHash, sign } from "node:crypto";
+
+import { CanonicalSerializer } from "@parmana/crypto";
 import { describe, expect, it } from "vitest";
 
-import { MemoryNonceStore } from "../../src/service/nonce-store.js";
-import { verifyExternalRelease } from "../../src/service/release.js";
+import { checkExternalRelease } from "../../src/service/release.js";
 
 import { AUDIENCE, CAPABILITY, keys, release, signed } from "./helpers.js";
 
-function check(body: ReturnType<typeof signed>, store = new MemoryNonceStore(), now = new Date()) {
-  return verifyExternalRelease(body, {
+function check(body: ReturnType<typeof signed>, now = new Date()) {
+  return checkExternalRelease(body, {
     publicKey: keys.publicKey,
     audience: AUDIENCE,
     capabilities: [CAPABILITY],
     now,
-    nonceStore: store,
   });
 }
 
-describe("verifyExternalRelease", () => {
+describe("checkExternalRelease", () => {
   it("accepts a release that is signed, addressed to this endpoint, served, fresh and new", async () => {
     const result = await check(signed(release()));
     expect(result.valid).toBe(true);
@@ -39,11 +40,10 @@ describe("verifyExternalRelease", () => {
     expect(result.valid).toBe(false);
   });
 
-  it("refuses a capability this endpoint does not serve, without using up the transaction", async () => {
-    const store = new MemoryNonceStore();
-    const wrong = await check(signed(release({ capability: "paytm:refund" })), store);
+  it("refuses a capability this endpoint does not serve, and accepts the same transaction when it is correct", async () => {
+    const wrong = await check(signed(release({ capability: "paytm:refund" })));
     expect(wrong.valid).toBe(false);
-    const right = await check(signed(release()), store);
+    const right = await check(signed(release()));
     expect(right.valid).toBe(true);
   });
 
@@ -80,10 +80,38 @@ describe("verifyExternalRelease", () => {
     expect(result.valid === false && result.errors).toContain("release.expiresAt must be after release.issuedAt");
   });
 
-  it("refuses a second release for the same transaction", async () => {
-    const store = new MemoryNonceStore();
-    expect((await check(signed(release()), store)).valid).toBe(true);
-    const again = await check(signed(release()), store);
-    expect(again).toMatchObject({ valid: false, errors: ["this businessTransactionId was already executed"] });
+  it("does not refuse a repeat, because the release ledger answers repeats with the first answer (G-132)", async () => {
+    expect((await check(signed(release()))).valid).toBe(true);
+    expect((await check(signed(release()))).valid).toBe(true);
+  });
+
+  it("accepts a large release signed as a SHA-512 commitment, as parmana-core does above 4096 bytes (G-131)", async () => {
+    const big = release({ parameters: { note: "x".repeat(5000) } });
+    const bytes = new CanonicalSerializer().serialize(big);
+    expect(bytes.length).toBeGreaterThan(4096);
+    const commitment = Buffer.concat([
+      Buffer.from("PARMANA-ED25519-LARGE-MESSAGE-V1\0", "utf8"),
+      createHash("sha512").update(bytes).digest(),
+    ]);
+    const body = {
+      release: big,
+      signature: { algorithm: "ed25519", keyId: "default", value: sign(null, commitment, keys.privateKey).toString("base64") },
+    };
+    expect((await check(body)).valid).toBe(true);
+  });
+
+  it("refuses a commitment signature over a small release, so a commitment cannot stand in for a short message", async () => {
+    const small = release();
+    const bytes = new CanonicalSerializer().serialize(small);
+    expect(bytes.length).toBeLessThanOrEqual(4096);
+    const commitment = Buffer.concat([
+      Buffer.from("PARMANA-ED25519-LARGE-MESSAGE-V1\0", "utf8"),
+      createHash("sha512").update(bytes).digest(),
+    ]);
+    const body = {
+      release: small,
+      signature: { algorithm: "ed25519", keyId: "default", value: sign(null, commitment, keys.privateKey).toString("base64") },
+    };
+    expect(await check(body)).toMatchObject({ valid: false, errors: ["the signature does not verify"] });
   });
 });
