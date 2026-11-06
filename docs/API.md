@@ -62,18 +62,24 @@ The other fields (`connectorId`, `authorizationId`, `policy`, `approvedBy`, `iss
 
 ## Checks
 
-Every check runs, and a refused release returns all the reasons it found. The replay check runs only when the other checks pass.
+Every check runs, and a refused release returns all the reasons it found. A refused release is not recorded, so it can be sent again with a fresh signature. A release that passes these checks is then recorded in the release ledger (see below).
 
 1. **Shape.** The body is a JSON object with `release` and `signature` objects, and at most 256 KB. Otherwise `400` (or `413` for an over-size body).
-2. **Signature.** Verified with Parmana's Ed25519 public key. Checks the algorithm and key id too.
+2. **Signature.** Verified with Parmana's Ed25519 public key. Checks the algorithm and key id too. A release whose canonical bytes are longer than 4096 bytes is signed by parmana-core over a commitment: the prefix `PARMANA-ED25519-LARGE-MESSAGE-V1` and a NUL byte, followed by the SHA-512 of the canonical bytes. The service accepts that form only for such releases, so a commitment cannot stand in for a signature over a short message (gap G-131).
 3. **Audience.** `release.audience` equals this endpoint's URL, exactly.
 4. **Capability.** The endpoint serves `release.capability`.
 5. **Expiry.** `now` is not later than `expiresAt` plus 30 seconds.
-6. **Replay.** The key `release:<businessTransactionId>` is recorded in the replay table before the connector runs. A second release with the same id is refused, even if the first one failed at the business system.
+6. **Ledger.** The release's `businessTransactionId` is claimed in the release ledger before the connector runs. Exactly one claim succeeds. A second release with the same id is never run again: it receives the first answer (see [`200`: a repeat](#200-a-repeat-gets-the-first-answer)). A claim with no stored answer means the first run has not finished, or stopped before it stored its answer; a repeat then gets `409` (gap G-132).
 
-The replay table is `parmana_connectors_nonces`. Each row keeps its key and `expires_at`. There is no timer. When the service checks a release, it first deletes rows that expired more than 5 minutes earlier. Once a row is gone, the same key would pass the replay check again.
+The release ledger is `parmana_connectors_release_ledger`. Each row keeps the `businessTransactionId`, its `expires_at`, and the stored answer. A row is not deleted by the service. Deleting a row would let the same release run again, so any cleanup is an operator decision.
 
 ## Answers
+
+### `200`: a repeat gets the first answer
+
+A release whose `businessTransactionId` has already run receives the stored answer, byte for byte, with `200`. The connector does not run again. The log records `release_repeated`.
+
+A repeat that arrives while the first run is still in progress, or after the first run stopped before storing its answer, gets `409` with `{"error":"this release is already being executed; retry later"}`. Nothing runs.
 
 ### `200`: the release ran
 
@@ -119,7 +125,7 @@ If the connector's answer is larger than 16 KB, the service returns `200` with `
 }
 ```
 
-Nothing ran. A release refused for any reason except the replay check can be sent again with a fresh signature. The replay refusal reads `this businessTransactionId was already executed`.
+Nothing ran. A refused release is not recorded, so it can be sent again with a fresh signature once the reason is fixed.
 
 ### `400`: not a release
 
@@ -139,7 +145,7 @@ The limit is 256 KB.
 
 ### `500`: the service could not check or run the release
 
-- `{"error":"internal error"}` when the replay store is unavailable. Nothing ran, so the same release may be sent again.
+- `{"error":"internal error"}` when the release ledger is unavailable. Nothing ran, so the same release may be sent again.
 - `{"error":"service is not configured"}` on Vercel when a setting is missing or invalid. The reason is in the log as `service_not_configured`. Nothing ran.
 
 ## Limits
@@ -162,10 +168,12 @@ The service writes one JSON line per event to stdout. Each line has `time` and `
 | --- | --- | --- |
 | `service_started` | `connector`, `host`, `port`, `nonceStore` | Local service started listening |
 | `nonce_store_memory` | `warning` | `PARMANA_NONCE_STORE=memory` is in use |
+| `release_repeated` | `businessTransactionId`, `capability` | A release was sent again. The stored answer, or `409`, was returned. Nothing ran |
+| `release_answer_not_stored` | `businessTransactionId` | The connector ran, but its answer could not be stored. A repeat gets `409` |
 | `release_refused` | `reasons` (a count) | A check refused the release |
 | `release_answered` | `businessTransactionId`, `capability`, `success` | The connector ran (or failed) and the answer was sent |
 | `connector_failed` | `businessTransactionId`, `capability`, `code`, `detail` | The connector threw. `code` is its error code, or `unknown`. `detail` is its message, or `none` |
-| `release_check_unavailable` | none | The replay store failed. The release was not run |
+| `release_check_unavailable` | none | The release ledger failed. The release was not run |
 | `unhandled_error` | none | An unexpected error in the local service. It returns `500` |
 | `service_not_configured` | `reason` (names the setting, never its value) | Vercel: a setting is missing or invalid |
 | `shutdown_started` | `signal` | SIGTERM or SIGINT received |

@@ -1,16 +1,24 @@
-import { verify, type KeyObject } from "node:crypto";
+import { createHash, verify, type KeyObject } from "node:crypto";
 
 import { CanonicalSerializer } from "@parmana/crypto";
-
-import type { NonceStore } from "./nonce-store.js";
 
 /**
  * parmana-core's external connector protocol (ADR-0013). Parmana POSTs
  * { release, signature } to the registered endpoint. The signature is the
  * authentication: the release is refused unless it verifies against Parmana's
  * public key, names this endpoint as its audience, names a capability this
- * endpoint serves, has not expired, and has not run before.
+ *  endpoint serves, and has not expired. Replay is not checked here: the caller
+ * records each release in the release ledger, which returns the first answer to a
+ * repeat (G-132).
  */
+
+/**
+ * Above this many bytes, parmana-core signs a release as a SHA-512 commitment of its
+ * canonical bytes, not the raw bytes (packages/crypto/src/SignatureCommitment.ts,
+ * ADR-0010). The limit and the prefix must match parmana-core exactly (G-131).
+ */
+const KMS_RAW_MESSAGE_LIMIT_BYTES = 4096;
+const COMMITMENT_PREFIX = Buffer.from("PARMANA-ED25519-LARGE-MESSAGE-V1\0", "utf8");
 
 /** Key id Parmana signs releases with. */
 export const RELEASE_KEY_ID = "default";
@@ -61,7 +69,6 @@ export interface ExternalReleaseOptions {
   /** The capabilities this endpoint serves. */
   readonly capabilities: readonly string[];
   readonly now: Date;
-  readonly nonceStore: NonceStore;
 }
 
 /** True when the body has the shape of a signed release. Says nothing about its validity. */
@@ -70,10 +77,10 @@ export function isSignedExternalRelease(body: unknown): body is SignedExternalRe
 }
 
 /**
- * Verifies a signed release. The replay record is written last, so a release
- * that fails any other check does not use up its businessTransactionId.
+ * Checks a signed release: shape, signature, audience, capability and expiry.
+ * It records nothing. A release that passes is not yet claimed; see the release ledger.
  */
-export async function verifyExternalRelease(
+export async function checkExternalRelease(
   body: SignedExternalRelease,
   options: ExternalReleaseOptions,
 ): Promise<ExternalReleaseCheck> {
@@ -125,18 +132,18 @@ export async function verifyExternalRelease(
     return { valid: false, errors };
   }
 
-  const fresh = await options.nonceStore.checkAndRecord(`release:${release.businessTransactionId}`, release.expiresAt);
-  if (!fresh) {
-    return { valid: false, errors: ["this businessTransactionId was already executed"] };
-  }
-
   return { valid: true, release };
 }
 
 function signatureVerifies(publicKey: KeyObject, value: string, release: ExternalRelease): boolean {
   try {
     const bytes = new CanonicalSerializer().serialize(release);
-    return verify(null, bytes, publicKey, Buffer.from(value, "base64"));
+    const signature = Buffer.from(value, "base64");
+    if (verify(null, bytes, publicKey, signature)) return true;
+    // A commitment is accepted only above the limit, so it cannot stand in for a signature over a small message.
+    if (bytes.length <= KMS_RAW_MESSAGE_LIMIT_BYTES) return false;
+    const commitment = Buffer.concat([COMMITMENT_PREFIX, createHash("sha512").update(bytes).digest()]);
+    return verify(null, commitment, publicKey, signature);
   } catch {
     return false;
   }

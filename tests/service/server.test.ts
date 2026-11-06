@@ -3,7 +3,7 @@ import type { Server } from "node:http";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ConnectorError, type ConnectorRequest, type GenericConnector } from "../../src/connector-contract.js";
-import { MemoryNonceStore, type NonceStore } from "../../src/service/nonce-store.js";
+import { MemoryReleaseLedger, type ReleaseLedger } from "../../src/service/release-ledger.js";
 import { createService } from "../../src/service/server.js";
 
 import { AUDIENCE, CAPABILITY, keys, release, signed } from "./helpers.js";
@@ -25,7 +25,7 @@ function fakeConnector(outcome: "ok" | "fail", log: ConnectorRequest[]): Generic
 let server: Server;
 let base: string;
 let calls: ConnectorRequest[] = [];
-let store: NonceStore = new MemoryNonceStore();
+let ledger: ReleaseLedger = new MemoryReleaseLedger();
 let behaviour: "ok" | "fail" = "ok";
 
 // One connector and one store for the whole run. Each test swaps what they delegate to.
@@ -34,15 +34,16 @@ const connector: GenericConnector = {
   capabilities: [CAPABILITY],
   execute: (request, context) => fakeConnector(behaviour, calls).execute(request, context),
 };
-const delegatingStore: NonceStore = {
-  checkAndRecord: (key, expiresAt) => store.checkAndRecord(key, expiresAt),
+const delegatingLedger: ReleaseLedger = {
+  claim: (id, expiresAt) => ledger.claim(id, expiresAt),
+  complete: (id, answer) => ledger.complete(id, answer),
 };
 
 beforeAll(async () => {
   const service = createService({
     publicKey: keys.publicKey,
     audience: AUDIENCE,
-    nonceStore: delegatingStore,
+    releaseLedger: delegatingLedger,
     connector,
     credentialId: "RAZORPAY_KEY_PAIR",
     resolveCredential: () => SECRET,
@@ -58,7 +59,7 @@ afterAll(() => {
 });
 
 function reset(next: "ok" | "fail" = "ok") {
-  store = new MemoryNonceStore();
+  ledger = new MemoryReleaseLedger();
   behaviour = next;
   calls = [];
 }
@@ -89,11 +90,13 @@ describe("the service", () => {
     expect(calls[0]).toMatchObject({ target: "pay_TestPayment01", businessTransactionId: "txn-service-1", parameters: { amount: 100 } });
   });
 
-  it("refuses the same release a second time, without running the connector again", async () => {
+  it("answers a repeat with the first answer, and does not run the connector again (G-132)", async () => {
     reset();
-    await post(signed(release()));
+    const first = await post(signed(release()));
+    const firstBody = await first.text();
     const again = await post(signed(release()));
-    expect(again.status).toBe(403);
+    expect(again.status).toBe(200);
+    expect(await again.text()).toBe(firstBody);
     expect(calls).toHaveLength(1);
   });
 
@@ -150,12 +153,13 @@ describe("the service", () => {
     expect((await fetch(`${base}/execute`)).status).toBe(404);
   });
 
-  it("answers 500 and runs nothing when the replay store is unavailable", async () => {
+  it("answers 500 and runs nothing when the release ledger is unavailable", async () => {
     reset();
-    store = {
-      checkAndRecord: async () => {
+    ledger = {
+      claim: async () => {
         throw new Error("database unreachable");
       },
+      complete: async () => undefined,
     };
     const response = await post(signed(release()));
     expect(response.status).toBe(500);
