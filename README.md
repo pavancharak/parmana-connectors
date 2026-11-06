@@ -122,6 +122,19 @@ The Vercel adapter strips the `/api` prefix and passes the request to the same h
 | `docs/` | The API and manifest references. Connector references live in each connector's folder | |
 | `.github/` | CI, CodeQL, DCO, dependency review, Dependabot and code owners | |
 
+## Release checks
+
+A signed release from parmana-core runs only if every check below passes:
+
+- Its signature verifies against the trusted key, and it names the default key.
+- Its `audience` is this endpoint.
+- Its `capability` is served by this service.
+- Its `issuedAt` is no more than 30 seconds in the future.
+- Its `expiresAt` has not passed, allowing 30 seconds of clock difference.
+- Its `expiresAt` is after its `issuedAt`, and the lifetime is at most 60 seconds.
+
+parmana-core issues every release with a 60-second lifetime and only shortens it, so a longer one was not issued by it. A release whose `businessTransactionId` has already been used is refused, and the connector does not run again.
+
 ## Rules for connectors
 
 These rules keep connectors separate from each other and from the manifest engine. `tests/boundaries.test.ts` checks them.
