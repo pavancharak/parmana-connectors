@@ -29,8 +29,9 @@ This service never decides whether an action is allowed. It refuses any release 
 | Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built and tested. Deployed to Vercel production at `https://parmana-connectors.vercel.app`, with no production traffic yet |
 | Razorpay connector (`razorpay:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 29 October 2026: 4 of 4 checks passed. Not run with live keys. No signed release has yet been run end to end through the deployed service |
 | Manifest engine (`src/manifest.ts`, `src/connector.ts`) | Built and covered by unit tests. Not used by any connector in the service yet. See [docs/MANIFEST.md](docs/MANIFEST.md) |
-| Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](RUNBOOK.md). Open items are in [RESUME.md](RESUME.md) |
+| Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](RUNBOOK.md). Open items are not listed publicly yet |
 | Live money | Off. Live keys are refused unless the service is started with `PARMANA_ALLOW_LIVE_KEYS=true` |
+| Migration out of parmana-core (ADR-0018), as of 3 November 2026 | Six connector folders on `main`: Razorpay, Paytm, Slack, GitHub, HubSpot, Zerodha (paper only, no live mode). Removed from parmana-core: Zerodha (#295), Slack (#296), Paytm (#297), GitHub (#299), HubSpot (#300). Registrations in parmana-core still open: Razorpay, GitHub, HubSpot, Slack. Paytm needs none. The status of each registration is listed above, and the steps are in the connector READMEs |
 
 ## Documentation
 
@@ -42,7 +43,6 @@ This service never decides whether an action is allowed. It refuses any release 
 | [docs/MANIFEST.md](docs/MANIFEST.md) | The manifest format and engine (tested, not used by a connector yet) |
 | [SETUP.md](SETUP.md) | The Vercel project and every environment variable |
 | [RUNBOOK.md](RUNBOOK.md) | Deploying, verifying, shipping a change, troubleshooting, and recovering a release that was recorded but not confirmed |
-| [RESUME.md](RESUME.md) | Current status and open items, with owners |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Branches, sign-off, checks, CI and how to add a connector |
 | [SECURITY.md](SECURITY.md) | How to report a vulnerability |
 
@@ -60,8 +60,13 @@ For a local run, copy `.env.example` to `.env` and fill it in. `npm start` reads
 
 | Setting | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `PARMANA_CONNECTOR` | Yes | none | The connector to run. One of: `paytm`, `razorpay` |
+| `PARMANA_CONNECTOR` | Yes | none | The connector to run. One of: `github`, `hubspot`, `paytm`, `razorpay`, `slack`, `zoho` |
+| `ZOHO_ACCESS_TOKEN` | Yes, for `zoho` | none | A Zoho OAuth access token. It is sent only in the `Zoho-oauthtoken` header, and the value is never shown in an error. See [the Zoho README](src/connectors/zoho/README.md) |
+| `ZOHO_ORGANIZATION_ID` | Yes, for `zoho` | none | The Zoho Books organization id, digits only. The service refuses to start without it |
 | `RAZORPAY_KEY_PAIR` | Yes, for `razorpay` | none | The Razorpay credential, `<key id>:<key secret>`. Its key id starts with `rzp_test_` or `rzp_live_` |
+| `SLACK_BOT_TOKEN` | Yes, for `slack` | none | The Slack bot token, `xoxb-...`. It needs the `chat:write` scope. The value is never shown in an error. See [the Slack README](src/connectors/slack/README.md) |
+| `GITHUB_APP_CREDENTIAL` | Yes, for `github` | none | `<app id>:<installation id>:<base64 of the App's PEM private key>`. A fresh installation token is minted for each call and never stored. See [the GitHub README](src/connectors/github/README.md) |
+| `HUBSPOT_PRIVATE_APP_TOKEN` | Yes, for `hubspot` | none | A HubSpot Private App token. It is sent only as a bearer header, and the value is never shown in an error. See [the HubSpot README](src/connectors/hubspot/README.md) |
 | `PAYTM_MERCHANT_CREDENTIAL` | Yes, for `paytm` | none | The Paytm credential, `<merchant id>:<merchant key>`. The key must be exactly 16 bytes. The connector runs against Paytm staging only. See [the Paytm README](src/connectors/paytm/README.md) |
 | `PARMANA_ALLOW_LIVE_KEYS` | No | `false` | Accepts `rzp_live_` keys. Leave unset until a live test has been approved. Must be `true` or `false` |
 | `PARMANA_PUBLIC_KEY` | One of the two | none | Parmana's Ed25519 public key, as PEM text. Literal `\n` sequences are read as line breaks. Releases are refused unless they verify against it |
