@@ -11,6 +11,7 @@ export const TRANSACTION = "txn-service-1";
 export const keys = generateKeyPairSync("ed25519");
 
 export function release(overrides: Partial<ExternalRelease> = {}): ExternalRelease {
+  const issuedAtMs = Date.now();
   return {
     version: 1,
     connectorId: "razorpay",
@@ -22,8 +23,8 @@ export function release(overrides: Partial<ExternalRelease> = {}): ExternalRelea
     parameters: { amount: 100 },
     policy: { name: "customer-refund", version: "1.2.0" },
     approvedBy: [],
-    issuedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    issuedAt: new Date(issuedAtMs).toISOString(),
+    expiresAt: new Date(issuedAtMs + 60_000).toISOString(),
     ...overrides,
   };
 }
