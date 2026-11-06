@@ -48,11 +48,36 @@ describe("verifyExternalRelease", () => {
   });
 
   it("refuses an expired release, allowing 30 seconds of clock difference", async () => {
+    const issuedAt = new Date(Date.now() - 120_000).toISOString();
     const expiresAt = new Date(Date.now() - 60_000).toISOString();
-    const result = await check(signed(release({ expiresAt })));
+    const result = await check(signed(release({ issuedAt, expiresAt })));
     expect(result).toMatchObject({ valid: false });
+    expect(result.valid === false && result.errors[0]).toContain("the release expired at");
+
     const within = new Date(Date.now() - 10_000).toISOString();
-    expect((await check(signed(release({ expiresAt: within })))).valid).toBe(true);
+    const withinIssued = new Date(Date.now() - 70_000).toISOString();
+    expect((await check(signed(release({ issuedAt: withinIssued, expiresAt: within })))).valid).toBe(true);
+  });
+
+  it("refuses a release issued in the future beyond the 30 second clock skew", async () => {
+    const issuedAt = new Date(Date.now() + 120_000).toISOString();
+    const expiresAt = new Date(Date.now() + 180_000).toISOString();
+    const result = await check(signed(release({ issuedAt, expiresAt })));
+    expect(result.valid === false && result.errors[0]).toContain("issued in the future");
+  });
+
+  it("refuses a release whose lifetime is longer than 60 seconds", async () => {
+    const issuedAt = new Date(Date.now()).toISOString();
+    const expiresAt = new Date(Date.now() + 120_000).toISOString();
+    const result = await check(signed(release({ issuedAt, expiresAt })));
+    expect(result.valid === false && result.errors[0]).toContain("the release lifetime is 120 s; the limit is 60 s");
+  });
+
+  it("refuses a release whose expiresAt is not after issuedAt", async () => {
+    const issuedAt = new Date(Date.now()).toISOString();
+    const expiresAt = new Date(Date.now() - 5_000).toISOString();
+    const result = await check(signed(release({ issuedAt, expiresAt })));
+    expect(result.valid === false && result.errors).toContain("release.expiresAt must be after release.issuedAt");
   });
 
   it("refuses a second release for the same transaction", async () => {
