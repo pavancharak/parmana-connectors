@@ -310,14 +310,14 @@ Each row is an error seen while building this deployment, with its cause and fix
 
 ## Recovering a release that was recorded but not confirmed
 
-Use this when a release was recorded and the answer is unclear. Examples: the service answered `connector failed: upstream_error` or `connector failed: timeout`, the process stopped during a refund, or a release is refused with `this businessTransactionId was already executed` and no answer reached you.
+Use this when a release was recorded and the answer is unclear. Examples: the service answered `connector failed: upstream_error` or `connector failed: timeout`, the process stopped during a refund, or a release is refused with `this release is already being executed; retry later` (HTTP 409) and no answer reached you.
 
 The service records a release before it runs the connector. A release that has been recorded cannot run again, so resending it does nothing. Whether a refund exists is a question for Razorpay, and only Razorpay can answer it.
 
 **Rules**
 
 - Do not resend the same release. The service refuses it.
-- Do not delete rows from `parmana_connectors_nonces` to make a release run again. That is a decision for the owner, not a step in this runbook.
+- Do not delete rows from `parmana_connectors_release_ledger` to make a release run again. That is a decision for the owner, not a step in this runbook. Rows are not deleted by the service.
 - Do not paste the key pair, the connection string or any secret into chat.
 
 **Steps**
@@ -328,13 +328,18 @@ The service records a release before it runs the connector. A release that has b
    vercel logs parmana-connectors.vercel.app --json
    ```
 
-2. **Check the replay record (read only).** In the Supabase project `parmana-connectors`, open the SQL editor and run this, replacing the placeholder. Do not use the `parmana-sandbox` project.
+2. **Check the release ledger (read only).** In the Supabase project `parmana-connectors`, open the SQL editor and run this, replacing the placeholder. Do not use the `parmana-sandbox` project.
 
    ```sql
-   SELECT nonce, expires_at FROM parmana_connectors_nonces WHERE nonce = 'release:<businessTransactionId>';
+   SELECT business_transaction_id, expires_at, answer FROM parmana_connectors_release_ledger WHERE business_transaction_id = '<businessTransactionId>';
    ```
 
-   A row means the release was recorded. No row means either the connector never ran, or the row was removed after it expired. Rows are deleted by the service when it checks a later release, once they are more than 5 minutes past `expires_at`. So an old row can be missing even though a refund was made. Step 3 decides which.
+   Read the result like this:
+   - **No row.** The service records a release before it runs the connector, so no row in this database means the connector did not run for it here. Step 3 still has to confirm before anyone acts, because the release may have been sent to a different database or environment.
+   - **A row with an `answer`.** The connector ran and the service stored its answer. Read `answer` (`success`, `status`, `body`) and record it. Do not resend.
+   - **A row with no `answer` (NULL).** The release was recorded, and the connector may have run, but the service stopped before it stored the answer. A repeat gets 409 until an operator resolves it. Go to step 3. Do not act on this row alone.
+
+   The service does not delete rows, so an old row is still there. A row with no answer cannot be cleared by a refund check alone; it is a decision for the owner.
 
 3. **Check Razorpay for a refund with that receipt.** Each refund made by the connector carries the `businessTransactionId` as its receipt. In the Razorpay Dashboard, in the mode the key belongs to, open the payment and look at its refunds. Or, from your own machine with the key in an environment variable (never pasted), replace `<pay_id>` and run:
 
