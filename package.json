@@ -1,6 +1,6 @@
 {
   "name": "parmana-connectors",
-  "version": "0.0.0",
+  "version": "2.0.0",
   "private": true,
   "description": "Vendor connectors for Parmana. Each runs as an external connector service and receives signed releases from parmana-core.",
   "type": "module",

@@ -1,0 +1,11 @@
+{
+  "remoteName": "origin",
+  "projects": [
+    {
+      "id": "prj_n38fstdv07ZjJaZdD6fxAyROgoPG",
+      "name": "parmana-connectors",
+      "directory": ".",
+      "orgId": "team_JXefH6HGpDrHFNVRtVJgK8fh"
+    }
+  ]
+}
