@@ -11,6 +11,7 @@ function check(body: ReturnType<typeof signed>, now = new Date()) {
   return checkExternalRelease(body, {
     publicKey: keys.publicKey,
     audience: AUDIENCE,
+    connectorId: "razorpay",
     capabilities: [CAPABILITY],
     now,
   });
@@ -20,6 +21,13 @@ describe("checkExternalRelease", () => {
   it("accepts a release that is signed, addressed to this endpoint, served, fresh and new", async () => {
     const result = await check(signed(release()));
     expect(result.valid).toBe(true);
+  });
+
+  it("refuses a release signed for another connector, even when its capability is served here", async () => {
+    const result = await check(signed(release({ connectorId: "paytm" })));
+    expect(result).toMatchObject({ valid: false });
+    expect(result.valid).toBe(false);
+    expect(result.errors).toEqual(['release.connectorId "paytm" is not this connector (razorpay)']);
   });
 
   it("refuses a release whose content changed after signing", async () => {
@@ -67,8 +75,10 @@ describe("checkExternalRelease", () => {
   });
 
   it("refuses a release whose lifetime is longer than 60 seconds", async () => {
-    const issuedAt = new Date(Date.now()).toISOString();
-    const expiresAt = new Date(Date.now() + 120_000).toISOString();
+    // One clock reading for both times: two readings can straddle a millisecond and change the lifetime.
+    const now = Date.now();
+    const issuedAt = new Date(now).toISOString();
+    const expiresAt = new Date(now + 120_000).toISOString();
     const result = await check(signed(release({ issuedAt, expiresAt })));
     expect(result.valid === false && result.errors[0]).toContain("the release lifetime is 120 s; the limit is 60 s");
   });

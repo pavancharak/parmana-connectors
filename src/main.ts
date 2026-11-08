@@ -23,12 +23,12 @@ async function main(): Promise<void> {
 
   let pool: Pool | undefined;
   let releaseLedger: ReleaseLedger;
-  if (config.nonceStore === "postgres") {
+  if (config.releaseLedger === "postgres") {
     pool = new Pool({ connectionString: config.databaseUrl });
     await pool.query(CREATE_RELEASE_LEDGER_SQL);
     releaseLedger = new PostgresReleaseLedger(pool);
   } else {
-    log("nonce_store_memory", { warning: "replay protection is per process" });
+    log("release_ledger_memory", { warning: "replay protection is per process" });
     releaseLedger = new MemoryReleaseLedger();
   }
 
@@ -50,7 +50,10 @@ async function main(): Promise<void> {
   });
 
   const server = await service.listen(config.port, config.host);
-  log("service_started", { connector: config.connector, host: config.host, port: config.port, nonceStore: config.nonceStore });
+  if (config.usesLegacyLedgerSetting) {
+    log("release_ledger_setting_deprecated", { deprecated: "PARMANA_NONCE_STORE", use: "PARMANA_RELEASE_LEDGER" });
+  }
+  log("service_started", { connector: config.connector, host: config.host, port: config.port, releaseLedger: config.releaseLedger });
 
   let stopping = false;
   const shutdown = (signal: string): void => {

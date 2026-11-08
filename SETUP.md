@@ -26,7 +26,7 @@ The functions are `api/execute.ts` (served at `/api/execute`) and `api/health.ts
 | --- | --- | --- | --- |
 | `PARMANA_CONNECTOR` | Secret | `razorpay` | Fixed |
 | `PARMANA_ALLOW_LIVE_KEYS` | Secret | `false` | Fixed. Stays `false` until live use is approved |
-| `PARMANA_NONCE_STORE` | Secret | `postgres` | Fixed |
+| `PARMANA_RELEASE_LEDGER` | Secret | `postgres` | Fixed |
 | `PARMANA_PUBLIC_KEY` | Config | One line, PEM text, with `\n` for line breaks: `-----BEGIN PUBLIC KEY-----\n<base64 key>\n-----END PUBLIC KEY-----` | The `pem` field of `https://parmana-api-real.vercel.app/keys/default`. The key is public. Config type, so it can be revealed in the dashboard |
 | `PARMANA_RELEASE_AUDIENCE` | Secret | `https://parmana-connectors.vercel.app/api/execute` | Must match the URL registered for this endpoint in parmana-core |
 | `PARMANA_DATABASE_URL` | Secret | `postgresql://<user>:<PASSWORD>@<host>:6543/postgres` (placeholder) | Supabase project `parmana-connectors`, Connect page, Transaction pooler string, with the database password filled in. Do not use the `parmana-sandbox` project, which is production's database |
@@ -59,7 +59,7 @@ Run from the repository folder. Each command prompts for the value, so the value
 ```powershell
 vercel env add PARMANA_CONNECTOR production
 vercel env add PARMANA_ALLOW_LIVE_KEYS production
-vercel env add PARMANA_NONCE_STORE production
+vercel env add PARMANA_RELEASE_LEDGER production
 vercel env add PARMANA_PUBLIC_KEY production
 vercel env add PARMANA_RELEASE_AUDIENCE production
 vercel env add PARMANA_DATABASE_URL production

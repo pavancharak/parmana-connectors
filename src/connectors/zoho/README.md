@@ -67,7 +67,7 @@ Copy `.env.example` to `.env` for local runs. On a hosted service, set these in 
 | `ZOHO_ORGANIZATION_ID` | Zoho Books organization id, digits only | Required |
 | `PARMANA_PUBLIC_KEY` or `PARMANA_PUBLIC_KEY_FILE` | Ed25519 public key | Set one, never both |
 | `PARMANA_RELEASE_AUDIENCE` | The endpoint URL, exactly as registered in `parmana-core` | Must be `https` |
-| `PARMANA_NONCE_STORE` | `postgres` | Required for more than one instance |
+| `PARMANA_RELEASE_LEDGER` | `postgres` | Required for more than one instance |
 | `PARMANA_DATABASE_URL` | Postgres connection string | Secret |
 | `PARMANA_ALLOW_LIVE_KEYS` | `false` | Keep `false` until live use is approved |
 | `PARMANA_CONNECTOR_TIMEOUT_MS` | `10000` | Default |

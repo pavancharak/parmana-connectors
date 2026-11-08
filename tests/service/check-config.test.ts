@@ -17,7 +17,7 @@ function env(overrides: Record<string, string | undefined> = {}): Record<string,
     RAZORPAY_KEY_PAIR: TEST_KEY,
     PARMANA_PUBLIC_KEY_FILE: "/keys/parmana.pem",
     PARMANA_RELEASE_AUDIENCE: "https://connector.example.com/execute",
-    PARMANA_NONCE_STORE: "memory",
+    PARMANA_RELEASE_LEDGER: "memory",
     ...overrides,
   };
 }
