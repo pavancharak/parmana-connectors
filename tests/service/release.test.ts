@@ -22,6 +22,29 @@ describe("checkExternalRelease", () => {
     expect(result.valid).toBe(true);
   });
 
+  it("refuses a release that carries business conditions this service cannot verify", async () => {
+    const result = await check(
+      signed(
+        release({
+          conditions: [{ signalKey: "payment.refundable", source: "razorpay", claim: "refundable", subject: "pay_TestPayment01", value: true, validUntil: new Date(Date.now() + 30_000).toISOString() }],
+        } as Partial<ReturnType<typeof release>>),
+      ),
+    );
+    expect(result.valid).toBe(false);
+    expect(result.valid === false && result.errors.join(" ")).toContain("cannot verify");
+  });
+
+  it("accepts a release with an empty condition list, which parmana-core omits anyway", async () => {
+    const result = await check(signed(release({ conditions: [] } as Partial<ReturnType<typeof release>>)));
+    expect(result.valid).toBe(true);
+  });
+
+  it("refuses a release whose conditions are not a list", async () => {
+    const result = await check(signed(release({ conditions: "yes" } as unknown as Partial<ReturnType<typeof release>>)));
+    expect(result.valid).toBe(false);
+    expect(result.valid === false && result.errors).toContain("release.conditions must be a list");
+  });
+
   it("refuses a release signed for another connector, even when its capability is served here", async () => {
     const result = await check(signed(release({ connectorId: "ext-paytm:refund" })));
     expect(result.valid).toBe(false);
