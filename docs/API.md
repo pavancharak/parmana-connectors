@@ -58,7 +58,7 @@ The service reads these fields:
 | `signature.keyId` | Must be `default` |
 | `signature.value` | Base64 signature over the canonical serialization of `release` (from `@parmana/crypto`) |
 
-`connectorId` must equal the connector this service runs (its `system` name, for example `razorpay`). The other fields (`authorizationId`, `policy`, `approvedBy`, `issuedAt`, `conditions`) are not checked by this service. They are covered by the signature, so changing any of them after signing fails the signature check.
+`connectorId` must be `ext-` followed by the release's `capability`, for example `ext-razorpay:refund`. This is the identity parmana-core signs for an external release. The other fields (`authorizationId`, `policy`, `approvedBy`, `issuedAt`, `conditions`) are not checked by this service. They are covered by the signature, so changing any of them after signing fails the signature check.
 
 ## Checks
 
