@@ -48,6 +48,11 @@ beforeAll(async () => {
     credentialId: "RAZORPAY_KEY_PAIR",
     resolveCredential: () => SECRET,
     timeoutMs: 10_000,
+    // The refund's payment check. These tests cover execution, so the check holds here; the condition
+    // tests cover the check itself.
+    conditionEvaluators: [
+      { signalKey: "payment.refundable", atomicity: "check-then-act", evaluate: async () => ({ holds: true }) },
+    ],
   });
   server = await service.listen(0, "127.0.0.1");
   const address = server.address() as AddressInfo;
