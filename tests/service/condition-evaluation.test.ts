@@ -70,7 +70,19 @@ const notHolding: ConditionEvaluator = {
   signalKey: "payment.refundable",
   atomicity: "check-then-act",
   async evaluate() {
-    return { holds: false, reason: "the payment has been fully refunded" };
+    return {
+      holds: false,
+      reason: "the payment has been fully refunded",
+      evidence: { source: "razorpay", status: "refunded", amount: 1000, amountRefunded: 1000 },
+    };
+  },
+};
+
+const holdsWithEvidence: ConditionEvaluator = {
+  signalKey: "payment.refundable",
+  atomicity: "check-then-act",
+  async evaluate() {
+    return { holds: true, evidence: { source: "razorpay", status: "captured", amount: 1000, amountRefunded: 0 } };
   },
 };
 
@@ -102,6 +114,32 @@ describe("a release whose condition has an evaluator", () => {
     expect(running.calls).toHaveLength(0);
   });
 
+  it("records the evidence for a condition that holds, in the answer", async () => {
+    running = await start(holdsWithEvidence);
+    const result = await running.post(withConditions([REFUNDABLE], "btx-holds-evidence-1"));
+    expect(result.json.conditionsChecked).toEqual([
+      {
+        signalKey: "payment.refundable",
+        atomicity: "check-then-act",
+        outcome: "holds",
+        evidence: { source: "razorpay", status: "captured", amount: 1000, amountRefunded: 0 },
+      },
+    ]);
+  });
+
+  it("keeps the evidence for a condition that does not hold, with the answer", async () => {
+    running = await start(notHolding);
+    const result = await running.post(withConditions([REFUNDABLE], "btx-not-holding-evidence-1"));
+    expect(result.json.conditionsChecked).toEqual([
+      {
+        signalKey: "payment.refundable",
+        atomicity: "check-then-act",
+        outcome: "not-holding",
+        evidence: { source: "razorpay", status: "refunded", amount: 1000, amountRefunded: 1000 },
+      },
+    ]);
+  });
+
   it("gives a repeat of a not-met release the same answer, and still does not call the connector", async () => {
     running = await start(notHolding);
     const first = await running.post(withConditions([REFUNDABLE], "btx-not-holding-2"));
@@ -116,6 +154,9 @@ describe("a release whose condition has an evaluator", () => {
     expect(result.status).toBe(200);
     expect(result.json).toMatchObject({ success: false });
     expect(result.json.conditionsNotMet).toBeUndefined();
+    expect(result.json.conditionsChecked).toEqual([
+      { signalKey: "payment.refundable", atomicity: "check-then-act", outcome: "unverified" },
+    ]);
     expect(running.calls).toHaveLength(0);
   });
 });

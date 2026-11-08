@@ -6,8 +6,9 @@ import { ConnectorError, type GenericConnector } from "../connector-contract.js"
 import {
   coveredSignalKeys,
   evaluateConditions,
+  signalKeyOf,
+  type CheckedCondition,
   type ConditionEvaluator,
-  type ConditionEvidence,
   type ConditionOutcome,
 } from "./condition-evaluator.js";
 import { log } from "./log.js";
@@ -107,20 +108,23 @@ export function createService(options: ServiceOptions) {
 
   async function answerUnmet(release: ExternalRelease, outcome: Exclude<ConditionOutcome, { status: "holds" }>, res: ServerResponse): Promise<void> {
     const notMet = outcome.status === "not-holding";
+    const signalKey = signalKeyOf(outcome);
     const body = {
       businessTransactionId: release.businessTransactionId,
       capability: release.capability,
       success: false,
       ...(notMet ? { conditionsNotMet: true } : {}),
       result: notMet
-        ? { reason: `business condition "${outcome.signalKey}" no longer holds: ${outcome.reason}` }
-        : { error: `business condition "${outcome.signalKey}" could not be verified; the connector was not called` },
+        ? { reason: `business condition "${signalKey}" no longer holds: ${outcome.reason}` }
+        : { error: `business condition "${signalKey}" could not be verified; the connector was not called` },
+      // Every condition checked, including the one that failed, with the evidence observed for it.
+      conditionsChecked: [...outcome.checked, outcome.failed],
       executedAt: new Date().toISOString(),
     };
     log(notMet ? "release_conditions_not_met" : "release_conditions_unverifiable", {
       businessTransactionId: release.businessTransactionId,
       capability: release.capability,
-      signalKey: outcome.signalKey,
+      signalKey,
     });
     try {
       await options.releaseLedger.complete(release.businessTransactionId, body);
@@ -133,7 +137,7 @@ export function createService(options: ServiceOptions) {
   async function answer(
     release: ExternalRelease,
     res: ServerResponse,
-    checked: readonly { signalKey: string; atomicity: string; evidence?: ConditionEvidence }[] = [],
+    checked: readonly CheckedCondition[] = [],
   ): Promise<void> {
     let success = true;
     let result: Record<string, unknown>;
