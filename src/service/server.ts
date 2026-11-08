@@ -3,6 +3,7 @@ import type { KeyObject } from "node:crypto";
 
 import { ConnectorError, type GenericConnector } from "../connector-contract.js";
 
+import { coveredSignalKeys, evaluateConditions, type ConditionEvaluator, type ConditionOutcome } from "./condition-evaluator.js";
 import { log } from "./log.js";
 import type { ReleaseLedger } from "./release-ledger.js";
 import { checkExternalRelease, isSignedExternalRelease, type ExternalRelease } from "./release.js";
@@ -24,6 +25,12 @@ export interface ServiceOptions {
   /** Returns the connector's credential. Called per release and never logged. */
   readonly resolveCredential: () => string;
   readonly timeoutMs: number;
+  /**
+   * The evaluators for business conditions, one per signal key. A release whose conditions are not all
+   * covered is refused. A covered condition that does not hold is answered with conditionsNotMet, and
+   * the connector is not called. Default: none, so a release with any condition is refused.
+   */
+  readonly conditionEvaluators?: readonly ConditionEvaluator[];
   readonly maxBodyBytes?: number;
   /** Injectable for tests. */
   readonly now?: () => Date;
@@ -37,6 +44,7 @@ export interface ServiceOptions {
 export function createService(options: ServiceOptions) {
   const maxBodyBytes = options.maxBodyBytes ?? DEFAULT_MAX_BODY_BYTES;
   const now = options.now ?? (() => new Date());
+  const evaluators = options.conditionEvaluators ?? [];
 
   async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     if (req.method === "GET" && req.url === "/health") {
@@ -58,6 +66,7 @@ export function createService(options: ServiceOptions) {
       publicKey: options.publicKey,
       audience: options.audience,
       capabilities: options.connector.capabilities,
+      coveredSignalKeys: coveredSignalKeys(evaluators),
       now: now(),
     });
     if (!check.valid) {
@@ -80,10 +89,46 @@ export function createService(options: ServiceOptions) {
       return send(res, 409, { error: "this release is already being executed; retry later" });
     }
 
-    return answer(check.release, res);
+    // The claim is in place, so a repeat gets whatever answer is stored here. The conditions are checked
+    // before the connector is called. A condition that does not hold, or cannot be verified, is an answer:
+    // the connector is not called and the release is recorded as not acted on.
+    const outcome = await evaluateConditions(check.release, evaluators);
+    if (outcome.status !== "holds") {
+      return answerUnmet(check.release, outcome, res);
+    }
+    return answer(check.release, res, outcome.checked);
   }
 
-  async function answer(release: ExternalRelease, res: ServerResponse): Promise<void> {
+  async function answerUnmet(release: ExternalRelease, outcome: Exclude<ConditionOutcome, { status: "holds" }>, res: ServerResponse): Promise<void> {
+    const notMet = outcome.status === "not-holding";
+    const body = {
+      businessTransactionId: release.businessTransactionId,
+      capability: release.capability,
+      success: false,
+      ...(notMet ? { conditionsNotMet: true } : {}),
+      result: notMet
+        ? { reason: `business condition "${outcome.signalKey}" no longer holds: ${outcome.reason}` }
+        : { error: `business condition "${outcome.signalKey}" could not be verified; the connector was not called` },
+      executedAt: new Date().toISOString(),
+    };
+    log(notMet ? "release_conditions_not_met" : "release_conditions_unverifiable", {
+      businessTransactionId: release.businessTransactionId,
+      capability: release.capability,
+      signalKey: outcome.signalKey,
+    });
+    try {
+      await options.releaseLedger.complete(release.businessTransactionId, body);
+    } catch {
+      log("release_answer_not_stored", { businessTransactionId: release.businessTransactionId });
+    }
+    return send(res, 200, body);
+  }
+
+  async function answer(
+    release: ExternalRelease,
+    res: ServerResponse,
+    checked: readonly { signalKey: string; atomicity: string }[] = [],
+  ): Promise<void> {
     let success = true;
     let result: Record<string, unknown>;
 
@@ -130,6 +175,8 @@ export function createService(options: ServiceOptions) {
       success,
       result,
       executedAt: new Date().toISOString(),
+      // Each condition checked before the call, with how it relates to the vendor action.
+      ...(checked.length > 0 ? { conditionsChecked: checked } : {}),
     };
     try {
       await options.releaseLedger.complete(release.businessTransactionId, body);

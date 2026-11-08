@@ -2,6 +2,7 @@ import { createHash, verify, type KeyObject } from "node:crypto";
 
 import { CanonicalSerializer } from "@parmana/crypto";
 import { expectedConnectorId } from "./connector-identity.js";
+import { uncheckedConditions } from "./condition-evaluator.js";
 
 /**
  * parmana-core's external connector protocol (ADR-0013). Parmana POSTs
@@ -69,6 +70,8 @@ export interface ExternalReleaseOptions {
   readonly audience: string;
   /** The capabilities this endpoint serves. */
   readonly capabilities: readonly string[];
+  /** The signal keys this endpoint has an evaluator for. A condition with any other key is refused. */
+  readonly coveredSignalKeys: readonly string[];
   readonly now: Date;
 }
 
@@ -115,16 +118,16 @@ export async function checkExternalRelease(
     errors.push(`release.capability ${JSON.stringify(release.capability ?? null)} is not served by this endpoint`);
   }
 
-  // parmana-core signs business conditions into a release, and this service cannot verify them yet.
-  // Acting on a release whose conditions it cannot check would ignore them, so the release is refused
-  // before it is claimed. It is not recorded, so it can be sent again once the service can verify them.
+  // parmana-core signs business conditions into a release. Each must have an evaluator in this service,
+  // or the release would act on a condition nobody checked. Refused before it is claimed, so it is not
+  // recorded and can be sent again. Conditions with an evaluator are checked after the claim.
   if (release.conditions !== undefined) {
     if (!Array.isArray(release.conditions)) {
       errors.push("release.conditions must be a list");
-    } else if (release.conditions.length > 0) {
-      errors.push(
-        `the release carries ${release.conditions.length} business condition(s), which this service cannot verify; it refuses the release`,
-      );
+    } else {
+      for (const key of uncheckedConditions(release.conditions, options.coveredSignalKeys)) {
+        errors.push(`the release carries a business condition for "${key}", which this service has no evaluator for; it refuses the release`);
+      }
     }
   }
 
