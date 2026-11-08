@@ -168,7 +168,15 @@ export function createRazorpayConnector(options: RazorpayConnectorOptions = {}):
         notes: { parmanaBusinessTransactionId: receipt },
       });
       if (created.status !== 200) {
-        throw refusal("creating the refund", created);
+        // A 4xx is Razorpay rejecting the request, so no refund was created. Anything else (a 5xx,
+        // a gateway timeout, an unexpected status) may come after Razorpay created the refund.
+        if (created.status >= 400 && created.status < 500) {
+          throw refusal("creating the refund", created);
+        }
+        throw new ConnectorError(
+          "upstream_error",
+          `Razorpay answered HTTP ${created.status} while creating the refund. A refund may have been created: check Razorpay for a refund with receipt ${receipt} before any other action`,
+        );
       }
       // A 200 without a refund id is not an answer. The refund may exist, so say so.
       if (typeof created.json.id !== "string") {
