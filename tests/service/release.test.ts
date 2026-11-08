@@ -75,8 +75,10 @@ describe("checkExternalRelease", () => {
   });
 
   it("refuses a release whose lifetime is longer than 60 seconds", async () => {
-    const issuedAt = new Date(Date.now()).toISOString();
-    const expiresAt = new Date(Date.now() + 120_000).toISOString();
+    // One clock reading for both times: two readings can straddle a millisecond and change the lifetime.
+    const now = Date.now();
+    const issuedAt = new Date(now).toISOString();
+    const expiresAt = new Date(now + 120_000).toISOString();
     const result = await check(signed(release({ issuedAt, expiresAt })));
     expect(result.valid === false && result.errors[0]).toContain("the release lifetime is 120 s; the limit is 60 s");
   });
