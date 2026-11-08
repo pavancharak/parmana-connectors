@@ -25,7 +25,21 @@ export function release(overrides: Partial<ExternalRelease> = {}): ExternalRelea
     approvedBy: [],
     issuedAt: new Date(issuedAtMs).toISOString(),
     expiresAt: new Date(issuedAtMs + 60_000).toISOString(),
+    // A refund must carry its payment check; parmana-core signs it in, so the default release has it.
+    conditions: [refundableCondition(issuedAtMs)],
     ...overrides,
+  };
+}
+
+/** The payment.refundable condition parmana-core signs into a Razorpay refund. */
+export function refundableCondition(issuedAtMs = Date.now()) {
+  return {
+    signalKey: "payment.refundable",
+    source: "razorpay",
+    claim: "refundable",
+    subject: "pay_TestPayment01",
+    value: true,
+    validUntil: new Date(issuedAtMs + 30_000).toISOString(),
   };
 }
 

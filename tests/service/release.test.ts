@@ -7,12 +7,12 @@ import { checkExternalRelease } from "../../src/service/release.js";
 
 import { AUDIENCE, CAPABILITY, keys, release, signed } from "./helpers.js";
 
-function check(body: ReturnType<typeof signed>, now = new Date()) {
+function check(body: ReturnType<typeof signed>, now = new Date(), coveredSignalKeys: string[] = ["payment.refundable"]) {
   return checkExternalRelease(body, {
     publicKey: keys.publicKey,
     audience: AUDIENCE,
     capabilities: [CAPABILITY],
-    coveredSignalKeys: [],
+    coveredSignalKeys,
     now,
   });
 }
@@ -30,13 +30,31 @@ describe("checkExternalRelease", () => {
           conditions: [{ signalKey: "payment.refundable", source: "razorpay", claim: "refundable", subject: "pay_TestPayment01", value: true, validUntil: new Date(Date.now() + 30_000).toISOString() }],
         } as Partial<ReturnType<typeof release>>),
       ),
+      new Date(),
+      [],
     );
     expect(result.valid).toBe(false);
     expect(result.valid === false && result.errors.join(" ")).toContain("has no evaluator for");
   });
 
-  it("accepts a release with an empty condition list, which parmana-core omits anyway", async () => {
+  it("refuses a refund whose condition list is empty, because it must carry its payment check", async () => {
     const result = await check(signed(release({ conditions: [] } as Partial<ReturnType<typeof release>>)));
+    expect(result.valid).toBe(false);
+    expect(result.valid === false && result.errors).toEqual([
+      'a razorpay:refund release must carry the business condition "payment.refundable"; this service refuses it without one',
+    ]);
+  });
+
+  it("refuses a refund that omits its payment check", async () => {
+    const withoutCheck = release({ conditions: undefined } as Partial<ReturnType<typeof release>>);
+    delete (withoutCheck as { conditions?: unknown }).conditions;
+    const result = await check(signed(withoutCheck));
+    expect(result.valid).toBe(false);
+    expect(result.valid === false && result.errors.join(" ")).toContain('must carry the business condition "payment.refundable"');
+  });
+
+  it("accepts a refund that carries its payment check and this service evaluates it", async () => {
+    const result = await check(signed(release()));
     expect(result.valid).toBe(true);
   });
 

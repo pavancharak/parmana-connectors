@@ -3,6 +3,7 @@ import { createHash, verify, type KeyObject } from "node:crypto";
 import { CanonicalSerializer } from "@parmana/crypto";
 import { expectedConnectorId } from "./connector-identity.js";
 import { uncheckedConditions } from "./condition-evaluator.js";
+import { missingRequiredConditions } from "./required-conditions.js";
 
 /**
  * parmana-core's external connector protocol (ADR-0013). Parmana POSTs
@@ -128,6 +129,15 @@ export async function checkExternalRelease(
       for (const key of uncheckedConditions(release.conditions, options.coveredSignalKeys)) {
         errors.push(`the release carries a business condition for "${key}", which this service has no evaluator for; it refuses the release`);
       }
+    }
+  }
+
+  // A capability can require a condition (a refund requires its payment check). The release must name it,
+  // so omitting the condition is refused rather than acted on unchecked.
+  if (typeof release.capability === "string") {
+    const conditions = Array.isArray(release.conditions) ? release.conditions : undefined;
+    for (const key of missingRequiredConditions(release.capability, conditions)) {
+      errors.push(`a ${release.capability} release must carry the business condition "${key}"; this service refuses it without one`);
     }
   }
 
