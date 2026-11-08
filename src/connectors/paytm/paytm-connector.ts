@@ -217,6 +217,8 @@ export function createPaytmConnector(options: PaytmConnectorOptions = {}): Gener
       method: "POST",
       headers: { "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({ body: signedBody, head: { tokenType: "AES", signature, channelId: "WEB" } }),
+      // The signed request must not follow a redirect to another host.
+      redirect: "error",
       signal,
     });
 
@@ -291,7 +293,14 @@ export function createPaytmConnector(options: PaytmConnectorOptions = {}): Gener
             controller.signal,
           );
         } catch (error) {
-          if (error instanceof ConnectorError) throw error;
+          // Every failure here came after the refund was sent: a refusal, a non-JSON answer, or no answer.
+          // The refund may have been applied, so each message carries the same instruction.
+          if (error instanceof ConnectorError) {
+            throw new ConnectorError(
+              "upstream_error",
+              `${error.message} The refund may have been applied: check Paytm for refId ${input.refId} before any other action.`,
+            );
+          }
           throw new ConnectorError("upstream_error", "The refund request may have reached Paytm, and no answer was read. Check Paytm for this refId before any other action.");
         }
 

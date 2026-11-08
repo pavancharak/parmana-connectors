@@ -253,3 +253,26 @@ describe("createRazorpayConnector", () => {
     expect(Date.now() - started).toBeLessThan(2_000);
   });
 });
+
+describe("createRazorpayConnector: ambiguous outcomes are reported, never as done", () => {
+  it("refuses a failed refund under the receipt, and makes no new refund", async () => {
+    const razorpay = fakeRazorpay({
+      existing: [{ id: "rfnd_FAILED01", amount: 100, status: "failed", payment_id: PAYMENT, receipt: TRANSACTION }],
+    });
+
+    await expect(createRazorpayConnector({ fetch: razorpay.fetch }).execute(request(), context())).rejects.toMatchObject({
+      code: "upstream_error",
+      message: expect.stringContaining("failed refund (rfnd_FAILED01)"),
+    });
+    expect(razorpay.calls.map((call) => call.method)).toEqual(["GET"]);
+  });
+
+  it("refuses a 200 create answer with no refund id, and says a refund may exist", async () => {
+    const razorpay = fakeRazorpay({ refundBody: {} });
+
+    await expect(createRazorpayConnector({ fetch: razorpay.fetch }).execute(request(), context())).rejects.toMatchObject({
+      code: "upstream_error",
+      message: expect.stringContaining(`check Razorpay for a refund with receipt ${TRANSACTION}`),
+    });
+  });
+});

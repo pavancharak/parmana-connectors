@@ -147,6 +147,13 @@ export function createRazorpayConnector(options: RazorpayConnectorOptions = {}):
         const items = listed.json.items as RazorpayRefund[];
         const earlier = items.find((item) => item.receipt === receipt);
         if (earlier !== undefined) {
+          // A failed refund did not return the money. Reporting it as done would hide the failure.
+          if (earlier.status === "failed") {
+            throw new ConnectorError(
+              "upstream_error",
+              `Razorpay has a failed refund (${earlier.id}) for receipt ${receipt}. No refund was created; check Razorpay before any other action`,
+            );
+          }
           return answer(earlier, true);
         }
         if (items.length < REFUND_PAGE_SIZE) {
@@ -162,6 +169,13 @@ export function createRazorpayConnector(options: RazorpayConnectorOptions = {}):
       });
       if (created.status !== 200) {
         throw refusal("creating the refund", created);
+      }
+      // A 200 without a refund id is not an answer. The refund may exist, so say so.
+      if (typeof created.json.id !== "string") {
+        throw new ConnectorError(
+          "upstream_error",
+          `Razorpay answered the refund creation without a refund id. A refund may have been created: check Razorpay for a refund with receipt ${receipt} before any other action`,
+        );
       }
       return answer(created.json as unknown as RazorpayRefund, false);
     },
