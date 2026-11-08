@@ -12,6 +12,7 @@ function check(body: ReturnType<typeof signed>, now = new Date()) {
     publicKey: keys.publicKey,
     audience: AUDIENCE,
     capabilities: [CAPABILITY],
+    coveredSignalKeys: [],
     now,
   });
 }
@@ -31,7 +32,7 @@ describe("checkExternalRelease", () => {
       ),
     );
     expect(result.valid).toBe(false);
-    expect(result.valid === false && result.errors.join(" ")).toContain("cannot verify");
+    expect(result.valid === false && result.errors.join(" ")).toContain("has no evaluator for");
   });
 
   it("accepts a release with an empty condition list, which parmana-core omits anyway", async () => {
