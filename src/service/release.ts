@@ -115,6 +115,19 @@ export async function checkExternalRelease(
     errors.push(`release.capability ${JSON.stringify(release.capability ?? null)} is not served by this endpoint`);
   }
 
+  // parmana-core signs business conditions into a release, and this service cannot verify them yet.
+  // Acting on a release whose conditions it cannot check would ignore them, so the release is refused
+  // before it is claimed. It is not recorded, so it can be sent again once the service can verify them.
+  if (release.conditions !== undefined) {
+    if (!Array.isArray(release.conditions)) {
+      errors.push("release.conditions must be a list");
+    } else if (release.conditions.length > 0) {
+      errors.push(
+        `the release carries ${release.conditions.length} business condition(s), which this service cannot verify; it refuses the release`,
+      );
+    }
+  }
+
   const issuedAt = typeof release.issuedAt === "string" ? Date.parse(release.issuedAt) : Number.NaN;
   const expiresAt = typeof release.expiresAt === "string" ? Date.parse(release.expiresAt) : Number.NaN;
   if (Number.isNaN(issuedAt)) {

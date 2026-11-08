@@ -62,7 +62,7 @@ The service reads these fields:
 
 ## Checks
 
-Every check runs, and a refused release returns all the reasons it found. A refused release is not recorded, so it can be sent again with a fresh signature. A release that passes these checks is then recorded in the release ledger (see below).
+Every check runs, and a refused release returns all the reasons it found. A release that carries business conditions (`release.conditions`, a non-empty list) is refused, because this service cannot verify them yet; it is never claimed or executed with those conditions ignored. A refused release is not recorded, so it can be sent again with a fresh signature. A release that passes these checks is then recorded in the release ledger (see below).
 
 1. **Shape.** The body is a JSON object with `release` and `signature` objects, and at most 256 KB. Otherwise `400` (or `413` for an over-size body).
 2. **Signature.** Verified with Parmana's Ed25519 public key. Checks the algorithm and key id too. A release whose canonical bytes are longer than 4096 bytes is signed by parmana-core over a commitment: the prefix `PARMANA-ED25519-LARGE-MESSAGE-V1` and a NUL byte, followed by the SHA-512 of the canonical bytes. The service accepts that form only for such releases, so a commitment cannot stand in for a signature over a short message (gap G-131).
