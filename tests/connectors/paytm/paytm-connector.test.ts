@@ -236,3 +236,27 @@ describe("paytm connector: checksum", () => {
     expect(createHash("sha256").update(`${JSON.stringify(apply?.body)}|${salt}`, "utf8").digest("hex")).toBe(hash);
   });
 });
+
+describe("paytm connector: ambiguous outcomes and redirects", () => {
+  it("tells the operator to check Paytm when the apply call is refused after it was sent", async () => {
+    const paytm = fakePaytm({ applyHttp: 500, apply: { resultInfo: { resultStatus: "F", resultCode: "9999" } } });
+
+    await expect(createPaytmConnector({ fetch: paytm.fetch }).execute(request(), context())).rejects.toMatchObject({
+      code: "upstream_error",
+      message: expect.stringMatching(/HTTP 500[\s\S]*check Paytm for refId/),
+    });
+  });
+
+  it("refuses to follow a redirect on the status check or the refund", async () => {
+    const paytm = fakePaytm({});
+    const seen: Array<RequestRedirect | undefined> = [];
+    const spy = (async (input: string | URL | Request, init?: RequestInit) => {
+      seen.push(init?.redirect);
+      return paytm.fetch(input, init);
+    }) as unknown as typeof fetch;
+
+    await createPaytmConnector({ fetch: spy }).execute(request(), context());
+
+    expect(seen).toEqual(["error", "error"]);
+  });
+});
