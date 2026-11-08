@@ -29,7 +29,12 @@ export interface ConditionEvaluator {
   evaluate(condition: ReleaseCondition, release: ExternalRelease): Promise<ConditionVerdict>;
 }
 
-export type ConditionVerdict = { readonly holds: true } | { readonly holds: false; readonly reason: string };
+/** Facts the evaluator observed, recorded with the answer. Plain values only; never a credential. */
+export type ConditionEvidence = Readonly<Record<string, string | number | boolean | null>>;
+
+export type ConditionVerdict =
+  | { readonly holds: true; readonly evidence?: ConditionEvidence }
+  | { readonly holds: false; readonly reason: string; readonly evidence?: ConditionEvidence };
 
 /** The signal keys this service has evaluators for. */
 export function coveredSignalKeys(evaluators: readonly ConditionEvaluator[]): string[] {
@@ -49,7 +54,10 @@ export function uncheckedConditions(conditions: readonly unknown[], covered: rea
 }
 
 export type ConditionOutcome =
-  | { readonly status: "holds"; readonly checked: readonly { signalKey: string; atomicity: string }[] }
+  | {
+      readonly status: "holds";
+      readonly checked: readonly { signalKey: string; atomicity: string; evidence?: ConditionEvidence }[];
+    }
   | { readonly status: "not-holding"; readonly signalKey: string; readonly reason: string }
   | { readonly status: "unverifiable"; readonly signalKey: string };
 
@@ -63,7 +71,7 @@ export async function evaluateConditions(
   evaluators: readonly ConditionEvaluator[],
 ): Promise<ConditionOutcome> {
   const conditions = (release.conditions ?? []) as readonly ReleaseCondition[];
-  const checked: { signalKey: string; atomicity: string }[] = [];
+  const checked: { signalKey: string; atomicity: string; evidence?: ConditionEvidence }[] = [];
   for (const condition of conditions) {
     const evaluator = evaluators.find((candidate) => candidate.signalKey === condition.signalKey);
     if (evaluator === undefined) {
@@ -78,7 +86,11 @@ export async function evaluateConditions(
     if (!verdict.holds) {
       return { status: "not-holding", signalKey: condition.signalKey, reason: verdict.reason.slice(0, 200) };
     }
-    checked.push({ signalKey: condition.signalKey, atomicity: evaluator.atomicity });
+    checked.push({
+      signalKey: condition.signalKey,
+      atomicity: evaluator.atomicity,
+      ...(verdict.evidence !== undefined ? { evidence: verdict.evidence } : {}),
+    });
   }
   return { status: "holds", checked };
 }

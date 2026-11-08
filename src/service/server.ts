@@ -3,7 +3,13 @@ import type { KeyObject } from "node:crypto";
 
 import { ConnectorError, type GenericConnector } from "../connector-contract.js";
 
-import { coveredSignalKeys, evaluateConditions, type ConditionEvaluator, type ConditionOutcome } from "./condition-evaluator.js";
+import {
+  coveredSignalKeys,
+  evaluateConditions,
+  type ConditionEvaluator,
+  type ConditionEvidence,
+  type ConditionOutcome,
+} from "./condition-evaluator.js";
 import { log } from "./log.js";
 import type { ReleaseLedger } from "./release-ledger.js";
 import { checkExternalRelease, isSignedExternalRelease, type ExternalRelease } from "./release.js";
@@ -127,7 +133,7 @@ export function createService(options: ServiceOptions) {
   async function answer(
     release: ExternalRelease,
     res: ServerResponse,
-    checked: readonly { signalKey: string; atomicity: string }[] = [],
+    checked: readonly { signalKey: string; atomicity: string; evidence?: ConditionEvidence }[] = [],
   ): Promise<void> {
     let success = true;
     let result: Record<string, unknown>;
