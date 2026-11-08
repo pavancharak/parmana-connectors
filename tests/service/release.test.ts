@@ -11,7 +11,6 @@ function check(body: ReturnType<typeof signed>, now = new Date()) {
   return checkExternalRelease(body, {
     publicKey: keys.publicKey,
     audience: AUDIENCE,
-    connectorId: "razorpay",
     capabilities: [CAPABILITY],
     now,
   });
@@ -24,10 +23,15 @@ describe("checkExternalRelease", () => {
   });
 
   it("refuses a release signed for another connector, even when its capability is served here", async () => {
-    const result = await check(signed(release({ connectorId: "paytm" })));
-    expect(result).toMatchObject({ valid: false });
+    const result = await check(signed(release({ connectorId: "ext-paytm:refund" })));
     expect(result.valid).toBe(false);
-    expect(result.errors).toEqual(['release.connectorId "paytm" is not this connector (razorpay)']);
+    expect(result.valid === false && result.errors).toEqual(['release.connectorId "ext-paytm:refund" is not "ext-razorpay:refund"']);
+  });
+
+  it("refuses the bare vendor name, which is not the identity parmana-core signs", async () => {
+    const result = await check(signed(release({ connectorId: "razorpay" })));
+    expect(result.valid).toBe(false);
+    expect(result.valid === false && result.errors).toEqual(['release.connectorId "razorpay" is not "ext-razorpay:refund"']);
   });
 
   it("refuses a release whose content changed after signing", async () => {

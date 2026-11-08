@@ -14,7 +14,7 @@ export function release(overrides: Partial<ExternalRelease> = {}): ExternalRelea
   const issuedAtMs = Date.now();
   return {
     version: 1,
-    connectorId: "razorpay",
+    connectorId: "ext-razorpay:refund",
     audience: AUDIENCE,
     businessTransactionId: TRANSACTION,
     authorizationId: "auth-1",
