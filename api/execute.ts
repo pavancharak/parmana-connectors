@@ -12,6 +12,7 @@ import {
   PostgresReleaseLedger,
   type ReleaseLedger,
 } from "../src/service/release-ledger.js";
+import { conditionEvaluatorsFor } from "../src/service/condition-evaluator-registry.js";
 import { createService } from "../src/service/server.js";
 
 type Handle = ReturnType<typeof createService>["handle"];
@@ -59,6 +60,10 @@ async function build(): Promise<Handle> {
       return value;
     },
     timeoutMs: config.timeoutMs,
+    conditionEvaluators: conditionEvaluatorsFor(config.connector, {
+      credential: process.env[credentialVariable] ?? "",
+      allowLiveKeys: config.allowLiveKeys,
+    }),
   });
   return service.handle;
 }

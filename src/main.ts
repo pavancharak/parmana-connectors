@@ -11,6 +11,7 @@ import {
   PostgresReleaseLedger,
   type ReleaseLedger,
 } from "./service/release-ledger.js";
+import { conditionEvaluatorsFor } from "./service/condition-evaluator-registry.js";
 import { createService } from "./service/server.js";
 
 /** How long in-flight requests may take to finish after a shutdown signal, in milliseconds. */
@@ -47,6 +48,10 @@ async function main(): Promise<void> {
       return value;
     },
     timeoutMs: config.timeoutMs,
+    conditionEvaluators: conditionEvaluatorsFor(config.connector, {
+      credential: process.env[credentialVariable] ?? "",
+      allowLiveKeys: config.allowLiveKeys,
+    }),
   });
 
   const server = await service.listen(config.port, config.host);
