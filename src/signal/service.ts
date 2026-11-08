@@ -69,7 +69,11 @@ export function createSignalService(
           source,
           now: now(),
         });
-        if (!verified.ok) return send(res, 403, { error: verified.reason });
+        if (!verified.ok) {
+          // Logged so an operator can see which check refused the query. Only the reason is logged, never the query or any key.
+          console.warn({ event: "signal_query_refused", reason: verified.reason });
+          return send(res, 403, { error: verified.reason });
+        }
 
         let answer: SignalAnswerMessage;
         try {
