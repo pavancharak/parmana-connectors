@@ -22,6 +22,17 @@ const complete = {
 };
 
 describe("loadSignalConfig", () => {
+  it("uses the source name from PARMANA_SIGNAL_SOURCE_NAME, and the default when it is unset", () => {
+    expect(loadSignalConfig({ ...complete, PARMANA_SIGNAL_SOURCE_NAME: "razorpay" }).source).toBe("razorpay");
+    expect(loadSignalConfig(complete).source).toBeUndefined();
+  });
+
+  it("refuses a source name that is not lowercase letters, digits and hyphens", () => {
+    expect(() => loadSignalConfig({ ...complete, PARMANA_SIGNAL_SOURCE_NAME: "Razorpay Payments" })).toThrow(
+      "PARMANA_SIGNAL_SOURCE_NAME must be",
+    );
+  });
+
   it("loads a complete configuration, with the documented defaults", () => {
     const config = loadSignalConfig(complete);
     expect(config.audience).toBe("https://signal.example.com/refund-payment");
