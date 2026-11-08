@@ -66,6 +66,8 @@ export interface ExternalReleaseOptions {
   readonly publicKey: KeyObject;
   /** This endpoint's URL, exactly as it is registered in parmana-core. */
   readonly audience: string;
+  /** The connector this service runs, by name (for example "razorpay"). */
+  readonly connectorId: string;
   /** The capabilities this endpoint serves. */
   readonly capabilities: readonly string[];
   readonly now: Date;
@@ -101,6 +103,12 @@ export async function checkExternalRelease(
 
   if (release.audience !== options.audience) {
     errors.push(`release.audience ${JSON.stringify(release.audience ?? null)} is not this endpoint`);
+  }
+
+  // A capability name can be served by more than one connector, so the signed connector
+  // identity must match this one. Without this, a release for another connector could run here.
+  if (release.connectorId !== options.connectorId) {
+    errors.push(`release.connectorId ${JSON.stringify(release.connectorId ?? null)} is not this connector (${options.connectorId})`);
   }
 
   if (!options.capabilities.includes(release.capability)) {

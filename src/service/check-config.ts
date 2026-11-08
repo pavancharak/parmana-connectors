@@ -38,7 +38,7 @@ function summarize(config: ServiceConfig): string {
     `connector: ${config.connector}`,
     `audience: ${config.audience}`,
     `live keys allowed: ${config.allowLiveKeys}`,
-    `nonce store: ${config.nonceStore}`,
+    `release ledger: ${config.releaseLedger}${config.usesLegacyLedgerSetting ? " (set by the deprecated PARMANA_NONCE_STORE)" : ""}`,
     `timeout: ${config.timeoutMs} ms`,
   ].join("\n");
 }

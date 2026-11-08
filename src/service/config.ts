@@ -24,8 +24,10 @@ export interface ServiceConfig {
   readonly allowLiveKeys: boolean;
   readonly timeoutMs: number;
   /** postgres: shared by every instance. memory: one process only, for tests. */
-  readonly nonceStore: "postgres" | "memory";
-  /** Set when nonceStore is postgres. */
+  readonly releaseLedger: "postgres" | "memory";
+  /** True when the setting came from the old name, PARMANA_NONCE_STORE. */
+  readonly usesLegacyLedgerSetting: boolean;
+  /** Set when releaseLedger is postgres. */
   readonly databaseUrl?: string | undefined;
 }
 
@@ -61,8 +63,8 @@ export function loadServiceConfig(env: Readonly<Record<string, string | undefine
   const host = env.PARMANA_SERVICE_HOST ?? "127.0.0.1";
   const timeoutMs = parseInteger(env.PARMANA_CONNECTOR_TIMEOUT_MS ?? "10000", "PARMANA_CONNECTOR_TIMEOUT_MS", 100, 120_000);
 
-  const nonceStore = parseNonceStore(env.PARMANA_NONCE_STORE);
-  const databaseUrl = nonceStore === "postgres" ? required(env, "PARMANA_DATABASE_URL") : undefined;
+  const { ledger, legacy } = parseReleaseLedger(env);
+  const databaseUrl = ledger === "postgres" ? required(env, "PARMANA_DATABASE_URL") : undefined;
 
   return {
     port,
@@ -73,7 +75,8 @@ export function loadServiceConfig(env: Readonly<Record<string, string | undefine
     credentialVariable,
     allowLiveKeys,
     timeoutMs,
-    nonceStore,
+    releaseLedger: ledger,
+    usesLegacyLedgerSetting: legacy,
     databaseUrl,
   };
 }
@@ -132,11 +135,27 @@ function parsePublicKey(pem: string, name: string): KeyObject {
   return key;
 }
 
-/** Defaults to postgres. The memory store must be asked for by name, because it does not share replay protection. */
-function parseNonceStore(raw: string | undefined): "postgres" | "memory" {
-  if (raw === undefined || raw === "postgres") return "postgres";
-  if (raw === "memory") return "memory";
-  throw new ConfigError("PARMANA_NONCE_STORE must be postgres or memory");
+const LEDGER_VARIABLE = "PARMANA_RELEASE_LEDGER";
+/** The old name. Still accepted, so existing deployments keep working; it logs a deprecation warning. */
+const LEGACY_LEDGER_VARIABLE = "PARMANA_NONCE_STORE";
+
+/**
+ * Reads the release ledger setting. It defaults to postgres. The memory ledger must be asked for
+ * by name, because it does not share replay protection. The legacy name is used only when the
+ * new one is unset, and setting both to different values stops startup.
+ */
+function parseReleaseLedger(env: Readonly<Record<string, string | undefined>>): { ledger: "postgres" | "memory"; legacy: boolean } {
+  const current = env[LEDGER_VARIABLE];
+  const legacy = env[LEGACY_LEDGER_VARIABLE];
+  if (current !== undefined && legacy !== undefined && current !== legacy) {
+    throw new ConfigError(`${LEDGER_VARIABLE} and ${LEGACY_LEDGER_VARIABLE} are both set and differ; remove ${LEGACY_LEDGER_VARIABLE}`);
+  }
+  const usesLegacy = current === undefined && legacy !== undefined;
+  const raw = current ?? legacy;
+  const name = usesLegacy ? LEGACY_LEDGER_VARIABLE : LEDGER_VARIABLE;
+  if (raw === undefined || raw === "postgres") return { ledger: "postgres", legacy: usesLegacy };
+  if (raw === "memory") return { ledger: "memory", legacy: usesLegacy };
+  throw new ConfigError(`${name} must be postgres or memory`);
 }
 
 function parseInteger(raw: string, name: string, min: number, max: number): number {

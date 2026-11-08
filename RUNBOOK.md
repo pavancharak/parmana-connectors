@@ -133,7 +133,7 @@ Each command prompts for the value, so the value never sits in your command hist
 ```bash
 vercel env add PARMANA_CONNECTOR production          # type: razorpay
 vercel env add PARMANA_ALLOW_LIVE_KEYS production     # type: false
-vercel env add PARMANA_NONCE_STORE production         # type: postgres
+vercel env add PARMANA_RELEASE_LEDGER production         # type: postgres
 vercel env add PARMANA_PUBLIC_KEY production          # type: the one-line PEM from Step 4
 vercel env add PARMANA_RELEASE_AUDIENCE production    # type: https://parmana-connectors.vercel.app/api/execute
 vercel env add PARMANA_DATABASE_URL production        # paste the Supabase string from Step 3
@@ -317,7 +317,7 @@ The service records a release before it runs the connector. A release that has b
 **Rules**
 
 - Do not resend the same release. The service refuses it.
-- Do not delete rows from `parmana_connectors_release_ledger` to make a release run again. That is a decision for the owner, not a step in this runbook. Rows are not deleted by the service.
+- Do not delete rows from `parmana_connectors_release_ledger` or `parmana_connectors_release_ledger_archive` to make a release run again. That is a decision for the owner, not a step in this runbook. The service never deletes rows: finished releases move to the archive with `npm run ledger:archive`, which keeps their ids blocked. Rows with no stored answer are never archived.
 - Do not paste the key pair, the connection string or any secret into chat.
 
 **Steps**

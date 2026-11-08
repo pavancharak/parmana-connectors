@@ -24,7 +24,7 @@ describe("api/execute adapter", () => {
     process.env.RAZORPAY_KEY_PAIR = "rzp_test_adapter:secret-for-tests";
     process.env.PARMANA_PUBLIC_KEY_FILE = publicKeyPath;
     process.env.PARMANA_RELEASE_AUDIENCE = "https://connector.example.com/api/execute";
-    process.env.PARMANA_NONCE_STORE = "memory";
+    process.env.PARMANA_RELEASE_LEDGER = "memory";
 
     const { default: handler } = await import("../../api/execute.js");
     server = createServer((req, res) => {

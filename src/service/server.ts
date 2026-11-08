@@ -57,6 +57,7 @@ export function createService(options: ServiceOptions) {
     const check = await checkExternalRelease(body, {
       publicKey: options.publicKey,
       audience: options.audience,
+      connectorId: options.connector.system,
       capabilities: options.connector.capabilities,
       now: now(),
     });

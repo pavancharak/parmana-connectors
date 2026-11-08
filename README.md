@@ -72,7 +72,7 @@ For a local run, copy `.env.example` to `.env` and fill it in. `npm start` reads
 | `PARMANA_PUBLIC_KEY` | One of the two | none | Parmana's Ed25519 public key, as PEM text. Literal `\n` sequences are read as line breaks. Releases are refused unless they verify against it |
 | `PARMANA_PUBLIC_KEY_FILE` | One of the two | none | Path to Parmana's Ed25519 public key, in PEM. Set this or `PARMANA_PUBLIC_KEY`, never both |
 | `PARMANA_RELEASE_AUDIENCE` | Yes | none | This endpoint's URL, exactly as registered in parmana-core. Must be `https://` |
-| `PARMANA_NONCE_STORE` | No | `postgres` | `postgres` shares replay protection across instances. `memory` is for one instance and tests |
+| `PARMANA_RELEASE_LEDGER` | No | `postgres` | `postgres` shares replay protection across instances. `memory` is for one instance and tests. The old name `PARMANA_NONCE_STORE` is still accepted, with a deprecation warning |
 | `PARMANA_DATABASE_URL` | With `postgres` | none | The database for replay protection. The service creates its table on start |
 | `PARMANA_SERVICE_PORT` | No | `8080` | Port to listen on. An integer from 1 to 65535 |
 | `PARMANA_SERVICE_HOST` | No | `127.0.0.1` | Address to bind. A hosted service needs `0.0.0.0` |

@@ -36,7 +36,7 @@ async function build(): Promise<Handle> {
   });
 
   let releaseLedger: ReleaseLedger;
-  if (config.nonceStore === "postgres") {
+  if (config.releaseLedger === "postgres") {
     const pool = new Pool({ connectionString: config.databaseUrl, max: 1 });
     await pool.query(CREATE_RELEASE_LEDGER_SQL);
     releaseLedger = new PostgresReleaseLedger(pool);

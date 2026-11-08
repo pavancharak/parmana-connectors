@@ -21,14 +21,32 @@ export interface ReleaseLedger {
 }
 
 export const RELEASE_LEDGER_TABLE = "parmana_connectors_release_ledger";
+/**
+ * Answered releases whose window has closed move here. A transaction id is never
+ * removed from the ledger, so it can never run again. The archive keeps the id blocked
+ * and the active table small.
+ */
+export const RELEASE_LEDGER_ARCHIVE_TABLE = "parmana_connectors_release_ledger_archive";
 
-/** Creates the ledger table. Safe to run on every start. */
+/** Creates the ledger and its archive. Safe to run on every start. */
 export const CREATE_RELEASE_LEDGER_SQL = `
   CREATE TABLE IF NOT EXISTS ${RELEASE_LEDGER_TABLE} (
     business_transaction_id text PRIMARY KEY,
     expires_at timestamptz NOT NULL,
     answer jsonb
+  );
+  CREATE TABLE IF NOT EXISTS ${RELEASE_LEDGER_ARCHIVE_TABLE} (
+    business_transaction_id text PRIMARY KEY,
+    expires_at timestamptz NOT NULL,
+    answer jsonb NOT NULL,
+    archived_at timestamptz NOT NULL DEFAULT now()
   )`;
+
+/**
+ * How long after a release's expiry its row may be archived. A release is refused after its
+ * expiry plus 30 seconds of clock skew, so after this grace no release can still be replayed.
+ */
+export const ARCHIVE_GRACE_MS = 60_000;
 
 /** One process only. Use the Postgres ledger when more than one instance runs. */
 export class MemoryReleaseLedger implements ReleaseLedger {
@@ -56,15 +74,21 @@ export class PostgresReleaseLedger implements ReleaseLedger {
     businessTransactionId: string,
     expiresAt: string,
   ): Promise<{ claimed: true } | { claimed: false; answer?: Record<string, unknown> }> {
+    // An archived id is never claimed again: the insert does nothing when the archive holds it.
     const inserted = await this.pool.query(
-      `INSERT INTO ${RELEASE_LEDGER_TABLE} (business_transaction_id, expires_at) VALUES ($1, $2)
+      `INSERT INTO ${RELEASE_LEDGER_TABLE} (business_transaction_id, expires_at)
+       SELECT $1::text, $2::timestamptz
+       WHERE NOT EXISTS (SELECT 1 FROM ${RELEASE_LEDGER_ARCHIVE_TABLE} WHERE business_transaction_id = $1::text)
        ON CONFLICT (business_transaction_id) DO NOTHING`,
       [businessTransactionId, expiresAt],
     );
     if (inserted.rowCount === 1) return { claimed: true };
 
     const existing = await this.pool.query(
-      `SELECT answer FROM ${RELEASE_LEDGER_TABLE} WHERE business_transaction_id = $1`,
+      `SELECT answer FROM ${RELEASE_LEDGER_TABLE} WHERE business_transaction_id = $1
+       UNION ALL
+       SELECT answer FROM ${RELEASE_LEDGER_ARCHIVE_TABLE} WHERE business_transaction_id = $1
+       LIMIT 1`,
       [businessTransactionId],
     );
     const answer = existing.rows[0]?.answer as Record<string, unknown> | null | undefined;
@@ -77,4 +101,25 @@ export class PostgresReleaseLedger implements ReleaseLedger {
       [businessTransactionId, JSON.stringify(answer)],
     );
   }
+}
+
+/**
+ * Moves answered releases whose window closed more than ARCHIVE_GRACE_MS ago to the archive,
+ * in one statement, so a row is never in neither table. Unanswered rows never move: their
+ * outcome is unknown and an operator resolves them. Returns the number moved.
+ */
+export async function archiveFinishedReleases(pool: Pick<Pool, "query">, now: Date = new Date()): Promise<number> {
+  const cutoff = new Date(now.getTime() - ARCHIVE_GRACE_MS).toISOString();
+  const moved = await pool.query(
+    `WITH moved AS (
+       DELETE FROM ${RELEASE_LEDGER_TABLE}
+       WHERE expires_at < $1::timestamptz AND answer IS NOT NULL
+       RETURNING business_transaction_id, expires_at, answer
+     )
+     INSERT INTO ${RELEASE_LEDGER_ARCHIVE_TABLE} (business_transaction_id, expires_at, answer)
+     SELECT business_transaction_id, expires_at, answer FROM moved
+     ON CONFLICT (business_transaction_id) DO NOTHING`,
+    [cutoff],
+  );
+  return moved.rowCount ?? 0;
 }

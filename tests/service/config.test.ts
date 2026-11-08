@@ -41,7 +41,7 @@ function refusal(overrides: Record<string, string | undefined>): string {
 describe("loadServiceConfig", () => {
   it("accepts a complete configuration and applies the defaults", () => {
     const config = loadServiceConfig(env(), readers);
-    expect(config).toMatchObject({ port: 8080, host: "127.0.0.1", connector: "razorpay", allowLiveKeys: false, nonceStore: "postgres" });
+    expect(config).toMatchObject({ port: 8080, host: "127.0.0.1", connector: "razorpay", allowLiveKeys: false, releaseLedger: "postgres" });
   });
 
   it("refuses a missing connector, and names the allowed ones", () => {
@@ -107,8 +107,29 @@ describe("loadServiceConfig", () => {
 
   it("requires a database for the postgres store, and allows memory only when asked for", () => {
     expect(refusal({ PARMANA_DATABASE_URL: undefined })).toBe("PARMANA_DATABASE_URL is required");
+    const config = loadServiceConfig(env({ PARMANA_RELEASE_LEDGER: "memory", PARMANA_DATABASE_URL: undefined }), readers);
+    expect(config.releaseLedger).toBe("memory");
+  });
+
+  it("reads the release ledger from PARMANA_RELEASE_LEDGER", () => {
+    const config = loadServiceConfig(env({ PARMANA_RELEASE_LEDGER: "memory", PARMANA_DATABASE_URL: undefined }), readers);
+    expect(config).toMatchObject({ releaseLedger: "memory", usesLegacyLedgerSetting: false });
+  });
+
+  it("still accepts the old PARMANA_NONCE_STORE name, and reports that it is deprecated", () => {
     const config = loadServiceConfig(env({ PARMANA_NONCE_STORE: "memory", PARMANA_DATABASE_URL: undefined }), readers);
-    expect(config.nonceStore).toBe("memory");
+    expect(config).toMatchObject({ releaseLedger: "memory", usesLegacyLedgerSetting: true });
+  });
+
+  it("refuses both names when they disagree, naming the one to remove", () => {
+    expect(() =>
+      loadServiceConfig(env({ PARMANA_RELEASE_LEDGER: "postgres", PARMANA_NONCE_STORE: "memory" }), readers),
+    ).toThrow(/PARMANA_RELEASE_LEDGER and PARMANA_NONCE_STORE are both set and differ; remove PARMANA_NONCE_STORE/);
+  });
+
+  it("accepts both names when they agree", () => {
+    const config = loadServiceConfig(env({ PARMANA_RELEASE_LEDGER: "memory", PARMANA_NONCE_STORE: "memory", PARMANA_DATABASE_URL: undefined }), readers);
+    expect(config).toMatchObject({ releaseLedger: "memory", usesLegacyLedgerSetting: false });
   });
 
   it("refuses a port outside the valid range", () => {

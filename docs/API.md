@@ -58,7 +58,7 @@ The service reads these fields:
 | `signature.keyId` | Must be `default` |
 | `signature.value` | Base64 signature over the canonical serialization of `release` (from `@parmana/crypto`) |
 
-The other fields (`connectorId`, `authorizationId`, `policy`, `approvedBy`, `issuedAt`, `conditions`) are not checked by this service. They are covered by the signature, so changing any of them after signing fails the signature check.
+`connectorId` must equal the connector this service runs (its `system` name, for example `razorpay`). The other fields (`authorizationId`, `policy`, `approvedBy`, `issuedAt`, `conditions`) are not checked by this service. They are covered by the signature, so changing any of them after signing fails the signature check.
 
 ## Checks
 
@@ -71,7 +71,7 @@ Every check runs, and a refused release returns all the reasons it found. A refu
 5. **Expiry.** `now` is not later than `expiresAt` plus 30 seconds.
 6. **Ledger.** The release's `businessTransactionId` is claimed in the release ledger before the connector runs. Exactly one claim succeeds. A second release with the same id is never run again: it receives the first answer (see [`200`: a repeat](#200-a-repeat-gets-the-first-answer)). A claim with no stored answer means the first run has not finished, or stopped before it stored its answer; a repeat then gets `409` (gap G-132).
 
-The release ledger is `parmana_connectors_release_ledger`. Each row keeps the `businessTransactionId`, its `expires_at`, and the stored answer. A row is not deleted by the service. Deleting a row would let the same release run again, so any cleanup is an operator decision.
+The release ledger is `parmana_connectors_release_ledger`. Each row keeps the `businessTransactionId`, its `expires_at`, and the stored answer. The service never deletes a row. Once a release has an answer and its window has closed by at least 60 seconds, `npm run ledger:archive` moves the row to `parmana_connectors_release_ledger_archive` in one statement. The archive keeps the id blocked, so a claim for an archived id returns the stored answer and never runs the connector again. A row with no stored answer is never archived, because its outcome is unknown.
 
 ## Answers
 
@@ -166,8 +166,9 @@ The service writes one JSON line per event to stdout. Each line has `time` and `
 
 | Event | Fields | When |
 | --- | --- | --- |
-| `service_started` | `connector`, `host`, `port`, `nonceStore` | Local service started listening |
-| `nonce_store_memory` | `warning` | `PARMANA_NONCE_STORE=memory` is in use |
+| `service_started` | `connector`, `host`, `port`, `releaseLedger` | Local service started listening |
+| `release_ledger_memory` | `warning` | `PARMANA_RELEASE_LEDGER=memory` is in use |
+| `release_ledger_setting_deprecated` | `deprecated`, `use` | The old `PARMANA_NONCE_STORE` name is set; use `PARMANA_RELEASE_LEDGER` instead |
 | `release_repeated` | `businessTransactionId`, `capability` | A release was sent again. The stored answer, or `409`, was returned. Nothing ran |
 | `release_answer_not_stored` | `businessTransactionId` | The connector ran, but its answer could not be stored. A repeat gets `409` |
 | `release_refused` | `reasons` (a count) | A check refused the release |
