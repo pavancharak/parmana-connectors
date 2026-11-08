@@ -267,6 +267,26 @@ describe("createRazorpayConnector: ambiguous outcomes are reported, never as don
     expect(razorpay.calls.map((call) => call.method)).toEqual(["GET"]);
   });
 
+  it("tells the operator to check Razorpay when the create call answers 5xx, since a refund may exist", async () => {
+    const razorpay = fakeRazorpay({ refundStatus: 502, refundBody: { error: { code: "SERVER_ERROR", description: "gateway" } } });
+
+    await expect(createRazorpayConnector({ fetch: razorpay.fetch }).execute(request(), context())).rejects.toMatchObject({
+      code: "upstream_error",
+      message: expect.stringContaining(`check Razorpay for a refund with receipt ${TRANSACTION}`),
+    });
+  });
+
+  it("says no refund was created when the create call answers 4xx, since Razorpay rejected it", async () => {
+    const razorpay = fakeRazorpay({ refundStatus: 400 });
+    const error = await createRazorpayConnector({ fetch: razorpay.fetch })
+      .execute(request(), context())
+      .catch((err: unknown) => err);
+
+    expect((error as ConnectorError).code).toBe("upstream_error");
+    expect((error as Error).message).toContain("Razorpay refused creating the refund");
+    expect((error as Error).message).not.toContain("check Razorpay");
+  });
+
   it("refuses a 200 create answer with no refund id, and says a refund may exist", async () => {
     const razorpay = fakeRazorpay({ refundBody: {} });
 
