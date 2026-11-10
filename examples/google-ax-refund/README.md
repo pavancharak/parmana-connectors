@@ -11,19 +11,19 @@ refund once.
 with a fake Razorpay-style connector, and submits releases to it the way
 parmana-core does.
 
-| Scenario | Expected |
-| --- | --- |
-| Authorized refund, signed by core | Connector runs once, returns 200 |
-| The same release sent again | Refused, connector not run again |
-| Release signed by a key other than core's | Refused, connector not run |
-| Release altered after signing (amount raised) | Refused, connector not run |
-| Release addressed to another endpoint | Refused, connector not run |
-| Expired release | Refused, connector not run |
-| Release lasting longer than 60 s | Refused, connector not run |
-| Capability this connector does not serve | Refused, connector not run |
-| Body that is not a signed release | Refused with 400, connector not run |
-| Connector credential in a success or failure response | Never returned to the caller |
-| Agent's request body | Contains only `release` and `signature`, no credential |
+| Scenario                                              | Expected                                                      |
+| ----------------------------------------------------- | ------------------------------------------------------------- |
+| Authorized refund, signed by core                     | Connector runs once, returns 200                              |
+| The same release sent again                           | Answered with the first answer (200), connector not run again |
+| Release signed by a key other than core's             | Refused, connector not run                                    |
+| Release altered after signing (amount raised)         | Refused, connector not run                                    |
+| Release addressed to another endpoint                 | Refused, connector not run                                    |
+| Expired release                                       | Refused, connector not run                                    |
+| Release lasting longer than 60 s                      | Refused, connector not run                                    |
+| Capability this connector does not serve              | Refused, connector not run                                    |
+| Body that is not a signed release                     | Refused with 400, connector not run                           |
+| Connector credential in a success or failure response | Never returned to the caller                                  |
+| Agent's request body                                  | Contains only `release` and `signature`, no credential        |
 
 Credential isolation depends on the deployment as well: the agent's sandbox
 must not hold the payment credential, in its environment, its files or its

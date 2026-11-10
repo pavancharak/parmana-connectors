@@ -22,7 +22,7 @@ import {
   type ConnectorRequest,
   type GenericConnector,
 } from "../../src/connector-contract.js";
-import { MemoryNonceStore } from "../../src/service/nonce-store.js";
+import { MemoryReleaseLedger } from "../../src/service/release-ledger.js";
 import { createService } from "../../src/service/server.js";
 import {
   AUDIENCE,
@@ -36,7 +36,10 @@ const SECRET = "rzp_test_abc:refund-acceptance-secret";
 const TARGET = "pay_TestPayment01";
 
 /** Stand-in for the AX-hosted agent: it proposes a refund and submits the release core signed. */
-async function submitToConnector(base: string, body: unknown): Promise<Response> {
+async function submitToConnector(
+  base: string,
+  body: unknown,
+): Promise<Response> {
   return fetch(`${base}/execute`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -60,17 +63,28 @@ async function startHarness(): Promise<Harness> {
       if (request.target !== TARGET) {
         throw new ConnectorError("invalid_input", "unexpected refund target");
       }
-      return { success: true, metadata: { status: 200, body: { refundId: "rfnd_1" } } };
+      return {
+        success: true,
+        metadata: { status: 200, body: { refundId: "rfnd_1" } },
+      };
     },
   };
   const service = createService({
     publicKey: keys.publicKey,
     audience: AUDIENCE,
-    nonceStore: new MemoryNonceStore(),
+    releaseLedger: new MemoryReleaseLedger(),
     connector,
     credentialId: "RAZORPAY_KEY_PAIR",
     resolveCredential: () => SECRET,
     timeoutMs: 10_000,
+    // The refund's payment check. This test covers the connector's boundary, so the check holds here.
+    conditionEvaluators: [
+      {
+        signalKey: "payment.refundable",
+        atomicity: "check-then-act",
+        evaluate: async () => ({ holds: true }),
+      },
+    ],
   });
   const server: Server = await service.listen(0, "127.0.0.1");
   const address = server.address() as AddressInfo;
@@ -96,17 +110,25 @@ async function ready(): Promise<Harness> {
 describe("refund proposed from Google AX", () => {
   it("runs an authorized refund once and returns the connector's result", async () => {
     const h = await ready();
-    const response = await submitToConnector(h.base, signed(release({ target: TARGET, parameters: { amount: 75_000 } })));
+    const response = await submitToConnector(
+      h.base,
+      signed(release({ target: TARGET, parameters: { amount: 75_000 } })),
+    );
     expect(response.status).toBe(200);
     expect(h.calls).toHaveLength(1);
     expect(h.calls[0]?.parameters).toEqual({ amount: 75_000 });
   });
 
-  it("refuses the same authorized release a second time without running the connector again", async () => {
+  it("answers the same authorized release a second time with the first answer, without running the connector again", async () => {
     const h = await ready();
-    const body = signed(release({ target: TARGET, parameters: { amount: 75_000 } }));
-    expect((await submitToConnector(h.base, body)).status).toBe(200);
-    expect((await submitToConnector(h.base, body)).status).toBe(403);
+    const body = signed(
+      release({ target: TARGET, parameters: { amount: 75_000 } }),
+    );
+    const first = await submitToConnector(h.base, body);
+    const firstText = await first.text();
+    const again = await submitToConnector(h.base, body);
+    expect(again.status).toBe(200);
+    expect(await again.text()).toBe(firstText);
     expect(h.calls).toHaveLength(1);
   });
 
@@ -123,9 +145,14 @@ describe("refund proposed from Google AX", () => {
 
   it("refuses a release whose body was changed after signing, and runs nothing", async () => {
     const h = await ready();
-    const tampered = signed(release({ target: TARGET, parameters: { amount: 1_000 } }));
+    const tampered = signed(
+      release({ target: TARGET, parameters: { amount: 1_000 } }),
+    );
     // The amount is raised after core signed the release.
-    const altered = { ...tampered, release: { ...tampered.release, parameters: { amount: 900_000 } } };
+    const altered = {
+      ...tampered,
+      release: { ...tampered.release, parameters: { amount: 900_000 } },
+    };
     const response = await submitToConnector(h.base, altered);
     expect(response.status).toBe(403);
     expect(h.calls).toHaveLength(0);
@@ -135,7 +162,12 @@ describe("refund proposed from Google AX", () => {
     const h = await ready();
     const response = await submitToConnector(
       h.base,
-      signed(release({ target: TARGET, audience: "https://other.example.com/execute" })),
+      signed(
+        release({
+          target: TARGET,
+          audience: "https://other.example.com/execute",
+        }),
+      ),
     );
     expect(response.status).toBe(403);
     expect(h.calls).toHaveLength(0);
@@ -187,10 +219,16 @@ describe("refund proposed from Google AX", () => {
 
   it("never returns the connector's credential to the caller, on success or failure", async () => {
     const h = await ready();
-    const ok = await submitToConnector(h.base, signed(release({ target: TARGET, parameters: { amount: 75_000 } })));
+    const ok = await submitToConnector(
+      h.base,
+      signed(release({ target: TARGET, parameters: { amount: 75_000 } })),
+    );
     const okText = await ok.text();
     // A release for a target the connector does not accept makes it fail.
-    const failed = await submitToConnector(h.base, signed(release({ target: "pay_other" })));
+    const failed = await submitToConnector(
+      h.base,
+      signed(release({ target: "pay_other" })),
+    );
     const failText = await failed.text();
     expect(okText).not.toContain(SECRET);
     expect(failText).not.toContain(SECRET);
