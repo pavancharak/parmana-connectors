@@ -137,6 +137,8 @@ Confirm that a policy is in effect on your instance before you test. See the `/p
 
 ## Operations
 
+For production steps, rotation, recovery and stopping the connector, see [RUNBOOK.md](RUNBOOK.md) in this folder.
+
 - **Rotate the App key:** generate a new key in the App settings, update `GITHUB_APP_CREDENTIAL`, redeploy, then delete the old key.
 - **Revoke access:** uninstall the App from the repository. This stops all calls immediately.
 - **Monitor:** review every `upstream_error` that tells you to check the pull request.
