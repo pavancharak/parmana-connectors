@@ -67,4 +67,4 @@ npm run typecheck
 npm test
 ```
 
-A change that affects how a connector is deployed or run must also follow that connector's runbook. The GitHub connector's runbook is in [src/connectors/github/RUNBOOK.md](../src/connectors/github/RUNBOOK.md), and the Razorpay deployment runbook is in [src/connectors/razorpay/RUNBOOK.md](../src/connectors/razorpay/RUNBOOK.md).
+A change that affects how a connector is deployed or run must also follow that connector's runbook. The GitHub connector's runbook is in [src/connectors/github/RUNBOOK.md](../src/connectors/github/RUNBOOK.md), and the Razorpay deployment runbook is in [RUNBOOK.md](../RUNBOOK.md).
