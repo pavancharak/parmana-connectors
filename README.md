@@ -37,9 +37,9 @@ It runs the code that performs approved actions in business systems. Each vendor
 
 ## Current work
 
-- **Migration from parmana-core (ADR-0018).** Accepted 2 November 2026. Every connector is now on `main` here. Core has removed Zerodha and Slack. Paytm's removal is in progress in core. GitHub and HubSpot are still in core. The step-by-step status is in [STEPS.md](STEPS.md).
+- **Migration from parmana-core (ADR-0018).** Accepted 2 November 2026. Every connector is now on `main` here. Core has removed Zerodha and Slack. Paytm's removal is in progress in core. GitHub and HubSpot are still in core.
 - **Razorpay.** The signed-release test through the preview is the next thing to run. Then the production registration in parmana-core, with the operator as maker and Mamta as checker.
-- **Signing.** `main` requires signed commits. Each PR needs the operator's signature before merge. The commands are in [STEPS.md](STEPS.md), section 5.
+- **Signing.** `main` requires signed commits. Each PR needs the operator's signature before merge. Signing is required on `main`, and the DCO sign-off is described in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Future work
 
