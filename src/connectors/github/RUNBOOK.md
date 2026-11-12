@@ -9,7 +9,7 @@ It builds on [RUNBOOK.md](../../../RUNBOOK.md), which covers the Vercel project,
 Read this first. The connector is **not ready for production**, and this runbook assumes these gaps are closed first:
 
 - **No live end-to-end run yet.** No signed release has been run through the deployed service to the live GitHub API. Run the test in [Step 7](#step-7-first-controlled-test) before anything else.
-- **Recovery needs a marker.** The comment body does not carry the `businessTransactionId`, so a lost answer cannot be matched to its comment. Section [If the outcome is unclear](#if-the-outcome-is-unclear) depends on this. Add the marker (see [Known gaps](#known-gaps)) before production.
+- **Recovery marker.** Each comment now ends with `<!-- parmana:btx=<businessTransactionId> -->`. This is present only from the release of the connector that includes it. Confirm it is deployed before production (see [Known gaps](#known-gaps)).
 - **Policy and registration are in core.** The `github-pr-comment` policy and the `github:comment` registration are made in `parmana-core`, through maker-checker. Neither is live until that work merges.
 - **Repeat risk is open.** The connectors README lists it as an open decision: a repeated release can post a second comment. The release ledger blocks a repeat of the same release. It does not stop a new, separately approved request from posting again.
 
@@ -176,7 +176,7 @@ Use this when the service answered `upstream_error` with "The comment may have r
 1. **Do not resend.** The ledger refuses a repeat of the same release. A new approval posts a new comment, so only send one after you have checked step 2.
 2. **Find the transaction ID** in the logs (`connector_failed` or `release_answered`).
 3. **Check the ledger (read only)** in the `parmana-connectors` Supabase project, with the query from [RUNBOOK.md, Recovering a release](../../../RUNBOOK.md#recovering-a-release-that-was-recorded-but-not-confirmed). Do not use the `parmana-sandbox` project.
-4. **Check GitHub for the comment.** Once the marker from [Known gaps](#known-gaps) is in place, search the PR's comments for the transaction ID. Until then, read the PR's comments by hand and look for one with the same text that the approval covered.
+4. **Check GitHub for the comment.** Search the PR's comments for the text `parmana:btx=<businessTransactionId>`. A comment that contains it was posted for that release. If none does, the comment was not posted for this release, as far as GitHub shows.
 5. **Decide and record it.** If the comment exists, record it and do not repeat it. If it does not exist, tell the owner. Do not raise a new approval until the owner agrees.
 
 ## Rotating the App key
@@ -202,7 +202,7 @@ Stopping does not undo comments already posted. Remove those by hand on GitHub.
 
 These need code or core changes before production. They are not steps you can do with this runbook.
 
-1. **Transaction marker in comments.** The connector should add a hidden marker such as `<!-- parmana:btx=<businessTransactionId> -->` to each comment body. Without it, a lost answer cannot be matched to its comment. This needs a code change in `parmana-connectors` and a new test.
+1. ~~Transaction marker in comments.~~ Added: each comment ends with `<!-- parmana:btx=<id> -->`. Check it is in the deployed release before production.
 2. **Repeat risk.** Decide whether a second, separately approved comment with the same text is allowed. Open in the connectors README.
 3. **Merge safety.** `github:pr-merge` needs its own review before it is enabled.
 4. **No live run yet.** See [Step 7](#step-7-first-controlled-test).
