@@ -50,7 +50,7 @@ describe("github:comment posts one comment", () => {
     const fake = fakeGitHub();
     const result = await createGitHubConnector({ fetch: fake.fetch, baseUrl: "https://gh.test" }).execute(request({ body: "Approved by Parmana" }), context);
     expect(fake.posted).toHaveLength(1);
-    expect(fake.posted[0]!.body).toEqual({ body: "Approved by Parmana" });
+    expect(fake.posted[0]!.body).toEqual({ body: "Approved by Parmana\n\n<!-- parmana:btx=btx-1 -->" });
     expect(fake.posted[0]!.authorization).toBe(`Bearer ${INSTALL_TOKEN}`);
     expect(result.metadata.body).toMatchObject({ commentId: 555 });
     expect(JSON.stringify(result)).not.toContain(INSTALL_TOKEN);
@@ -61,6 +61,22 @@ describe("github:comment posts one comment", () => {
     const connector = createGitHubConnector({ fetch: fake.fetch, baseUrl: "https://gh.test" });
     await expect(connector.execute(request({ body: "   " }), context)).rejects.toMatchObject({ code: "invalid_input" });
     await expect(connector.execute(request({ body: "x".repeat(4001) }), context)).rejects.toMatchObject({ code: "invalid_input" });
+    expect(fake.posted).toHaveLength(0);
+  });
+
+  it("marks the comment with the transaction id so it can be found later", async () => {
+    const fake = fakeGitHub();
+    await createGitHubConnector({ fetch: fake.fetch, baseUrl: "https://gh.test" }).execute(request({ body: "Hello" }), context);
+    expect(String((fake.posted[0]!.body as { body: string }).body)).toContain("<!-- parmana:btx=btx-1 -->");
+  });
+
+  it("refuses a missing or unsafe transaction id before any call", async () => {
+    const fake = fakeGitHub();
+    const connector = createGitHubConnector({ fetch: fake.fetch, baseUrl: "https://gh.test" });
+    const missing: ConnectorRequest = { capability: GITHUB_COMMENT_CAPABILITY, parameters: { body: "ok" }, target: TARGET };
+    await expect(connector.execute(missing, context)).rejects.toMatchObject({ code: "invalid_input" });
+    const unsafe: ConnectorRequest = { ...request({ body: "ok" }), businessTransactionId: "x --> injected" };
+    await expect(connector.execute(unsafe, context)).rejects.toMatchObject({ code: "invalid_input" });
     expect(fake.posted).toHaveLength(0);
   });
 

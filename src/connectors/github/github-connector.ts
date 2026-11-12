@@ -35,6 +35,8 @@ const FETCH_PARAMETERS: ReadonlySet<string> = new Set([]);
 const MERGE_PARAMETERS: ReadonlySet<string> = new Set(["mergeMethod", "expectedHeadSha"]);
 const COMMENT_PARAMETERS: ReadonlySet<string> = new Set(["body"]);
 const COMMENT_MAX_LENGTH = 4000;
+/** Parmana's businessTransactionId as written in the comment. Limited to characters that cannot end the HTML comment. */
+const BTX_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
 const TARGET = /^([A-Za-z0-9-]{1,39})\/([A-Za-z0-9._-]{1,100})#(\d{1,10})$/;
 const HEAD_SHA = /^[0-9a-f]{40}$/;
 const USER_AGENT = "parmana-connector-github";
@@ -180,7 +182,12 @@ export function createGitHubConnector(options: GitHubConnectorOptions = {}): Gen
         if (typeof body !== "string" || body.trim().length === 0 || body.length > COMMENT_MAX_LENGTH) {
           refuse(`body must be a non-empty string of at most ${COMMENT_MAX_LENGTH} characters.`);
         }
-        commentBody = body;
+        const btx = request.businessTransactionId;
+        if (typeof btx !== "string" || !BTX_PATTERN.test(btx)) {
+          refuse("A comment needs a businessTransactionId of letters, digits, dots, colons, underscores or hyphens.");
+        }
+        // The marker lets an operator find this comment on GitHub by its release, if the answer is lost.
+        commentBody = `${body}\n\n<!-- parmana:btx=${btx} -->`;
       }
 
       const controller = new AbortController();
