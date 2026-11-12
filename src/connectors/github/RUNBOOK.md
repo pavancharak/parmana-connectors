@@ -61,6 +61,8 @@ Expected: the service accepts the value at startup. A raw PEM, or a value with t
 
 ## Step 3: Vercel settings for GitHub
 
+The GitHub connector runs in its **own** Vercel project, `<github-project>`, created in step 7 of [ROLLOUT.md](ROLLOUT.md). It must not reuse the Razorpay project, which runs one different connector. Replace `<github-project>` everywhere in this file with that project's name before you run a command.
+
 These are the settings from [RUNBOOK.md, Step 5](../../../RUNBOOK.md#step-5-set-the-vercel-environment-variables), with two changes:
 
 ```bash
@@ -75,7 +77,7 @@ Keep `PARMANA_RELEASE_LEDGER=postgres` and `PARMANA_DATABASE_URL` set, as in the
 Then redeploy `main`, as in the main runbook, and confirm the health check:
 
 ```bash
-vercel curl https://parmana-connectors.vercel.app/api/health
+vercel curl https://<github-project>.vercel.app/api/health
 ```
 
 Expected: a healthy response for `github`. If the service starts with a credential error, read the `reason` in `vercel logs` and fix the variable.
@@ -112,7 +114,7 @@ Do not edit the log by hand, and do not paste `CI_DATABASE_URL` into chat or a c
 
 Only after 4a has merged:
 
-1. A maker proposes `github:comment` with the endpoint `https://parmana-connectors.vercel.app/api/execute`, names the policy `github-pr-comment` at version `1.0.0`, and lists the allowed parameters: `body`.
+1. A maker proposes `github:comment` with the endpoint `https://<github-project>.vercel.app/api/execute`, names the policy `github-pr-comment` at version `1.0.0`, and lists the allowed parameters: `body`.
 2. A different person, the checker, approves it with a step-up signature.
 3. Check `GET /external-connectors` shows the registration as active.
 
@@ -145,15 +147,15 @@ Confirm each of these on the test repository before any real one:
 1. Pick a test PR in a test repository that the App is installed on.
 2. Approve one short comment through the flow in Step 5.
 3. Check the PR. Expected: one comment, from the App.
-4. Check the logs: `vercel logs parmana-connectors.vercel.app --json`. Expected: one `release_answered` line with `success: true`.
+4. Check the logs: `vercel logs <github-project>.vercel.app --json`. Expected: one `release_answered` line with `success: true`.
 5. Delete the test comment on GitHub, once you have checked it.
 
 Do not move past this step until it passes.
 
 ## Checking health and activity
 
-- Health: `vercel curl https://parmana-connectors.vercel.app/api/health`.
-- Activity: `vercel logs parmana-connectors.vercel.app --json`. Watch for `release_answered`, `release_refused` and `connector_failed`.
+- Health: `vercel curl https://<github-project>.vercel.app/api/health`.
+- Activity: `vercel logs <github-project>.vercel.app --json`. Watch for `release_answered`, `release_refused` and `connector_failed`.
 - On GitHub: the App's own activity, and the repository's audit log for comments.
 
 ## Errors you may see
