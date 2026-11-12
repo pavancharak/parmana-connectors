@@ -2,7 +2,7 @@
 
 This runbook covers running the `github` connector in production: the App, the service settings, the Parmana core registration, checks, rotation, stopping it, and what to do when a comment's outcome is unclear.
 
-It builds on [RUNBOOK.md](RUNBOOK.md), which covers the Vercel project, the Supabase database and the deployment steps. Follow that runbook first. The differences for GitHub are below.
+It builds on [RUNBOOK.md](../../../RUNBOOK.md), which covers the Vercel project, the Supabase database and the deployment steps. Follow that runbook first. The differences for GitHub are below.
 
 ## Status before you start
 
@@ -61,7 +61,7 @@ Expected: the service accepts the value at startup. A raw PEM, or a value with t
 
 ## Step 3: Vercel settings for GitHub
 
-These are the settings from [RUNBOOK.md, Step 5](RUNBOOK.md#step-5-set-the-vercel-environment-variables), with two changes:
+These are the settings from [RUNBOOK.md, Step 5](../../../RUNBOOK.md#step-5-set-the-vercel-environment-variables), with two changes:
 
 ```bash
 vercel env add PARMANA_CONNECTOR production              # type: github
@@ -175,7 +175,7 @@ Use this when the service answered `upstream_error` with "The comment may have r
 
 1. **Do not resend.** The ledger refuses a repeat of the same release. A new approval posts a new comment, so only send one after you have checked step 2.
 2. **Find the transaction ID** in the logs (`connector_failed` or `release_answered`).
-3. **Check the ledger (read only)** in the `parmana-connectors` Supabase project, with the query from [RUNBOOK.md, Recovering a release](RUNBOOK.md#recovering-a-release-that-was-recorded-but-not-confirmed). Do not use the `parmana-sandbox` project.
+3. **Check the ledger (read only)** in the `parmana-connectors` Supabase project, with the query from [RUNBOOK.md, Recovering a release](../../../RUNBOOK.md#recovering-a-release-that-was-recorded-but-not-confirmed). Do not use the `parmana-sandbox` project.
 4. **Check GitHub for the comment.** Once the marker from [Known gaps](#known-gaps) is in place, search the PR's comments for the transaction ID. Until then, read the PR's comments by hand and look for one with the same text that the approval covered.
 5. **Decide and record it.** If the comment exists, record it and do not repeat it. If it does not exist, tell the owner. Do not raise a new approval until the owner agrees.
 
