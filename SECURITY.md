@@ -23,4 +23,4 @@ Out of scope here: the policy engine and the signing side, which are in parmana-
 
 ## Secrets in this repository
 
-Secrets are never committed. Production values are set only in Vercel, and local values only in a git-ignored `.env` file. See [SETUP.md](SETUP.md) and [RUNBOOK.md](RUNBOOK.md) for where each value is kept.
+Secrets are never committed. Production values are set only in Vercel, and local values only in a git-ignored `.env` file. See [SETUP.md](SETUP.md) and [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md) for where each value is kept.

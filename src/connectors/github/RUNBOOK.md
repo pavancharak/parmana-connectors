@@ -2,7 +2,7 @@
 
 This runbook covers running the `github` connector in production: the App, the service settings, the Parmana core registration, checks, rotation, stopping it, and what to do when a comment's outcome is unclear.
 
-It builds on [RUNBOOK.md](../../../RUNBOOK.md), which covers the Vercel project, the Supabase database and the deployment steps. Follow that runbook first. The differences for GitHub are below.
+It builds on [RUNBOOK.md](../razorpay/RUNBOOK.md), which covers the Vercel project, the Supabase database and the deployment steps. Follow that runbook first. The differences for GitHub are below.
 
 ## Status before you start
 
@@ -63,7 +63,7 @@ Expected: the service accepts the value at startup. A raw PEM, or a value with t
 
 The GitHub connector runs in its **own** Vercel project, `<github-project>`, created in step 7 of [ROLLOUT.md](ROLLOUT.md). It must not reuse the Razorpay project, which runs one different connector. Replace `<github-project>` everywhere in this file with that project's name before you run a command.
 
-These are the settings from [RUNBOOK.md, Step 5](../../../RUNBOOK.md#step-5-set-the-vercel-environment-variables), with two changes:
+These are the settings from [RUNBOOK.md, Step 5](../razorpay/RUNBOOK.md#step-5-set-the-vercel-environment-variables), with two changes:
 
 ```bash
 vercel env add PARMANA_CONNECTOR production              # type: github
@@ -177,7 +177,7 @@ Use this when the service answered `upstream_error` with "The comment may have r
 
 1. **Do not resend.** The ledger refuses a repeat of the same release. A new approval posts a new comment, so only send one after you have checked step 2.
 2. **Find the transaction ID** in the logs (`connector_failed` or `release_answered`).
-3. **Check the ledger (read only)** in the `parmana-connectors` Supabase project, with the query from [RUNBOOK.md, Recovering a release](../../../RUNBOOK.md#recovering-a-release-that-was-recorded-but-not-confirmed). Do not use the `parmana-sandbox` project.
+3. **Check the ledger (read only)** in the `parmana-connectors` Supabase project, with the query from [RUNBOOK.md, Recovering a release](../razorpay/RUNBOOK.md#recovering-a-release-that-was-recorded-but-not-confirmed). Do not use the `parmana-sandbox` project.
 4. **Check GitHub for the comment.** Search the PR's comments for the text `parmana:btx=<businessTransactionId>`. A comment that contains it was posted for that release. If none does, the comment was not posted for this release, as far as GitHub shows.
 5. **Decide and record it.** If the comment exists, record it and do not repeat it. If it does not exist, tell the owner. Do not raise a new approval until the owner agrees.
 

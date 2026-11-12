@@ -58,7 +58,7 @@ Follow [README: Adding a connector](README.md#adding-a-connector). A new connect
 
 ## Deployment
 
-Pushes to `main` deploy to Vercel production. Other branches get preview deployments. Read [RUNBOOK.md](RUNBOOK.md) before changing anything that affects production, and never change a production setting in a way the runbook does not describe.
+Pushes to `main` deploy to Vercel production. Other branches get preview deployments. Read [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md) before changing anything that affects production, and never change a production setting in a way the runbook does not describe.
 
 ## Reporting a security problem
 
