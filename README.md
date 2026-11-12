@@ -55,7 +55,7 @@ It runs the code that performs approved actions in business systems. Each vendor
 | Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built and tested. Deployed to Vercel production at `https://parmana-connectors.vercel.app`, with no production traffic yet |
 | Razorpay connector (`razorpay:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 29 October 2026: 4 of 4 checks passed. Not run with live keys. No signed release has yet been run end to end through the deployed service |
 | Manifest engine (`src/manifest.ts`, `src/connector.ts`) | Built and covered by unit tests. Not used by any connector in the service yet. See [docs/MANIFEST.md](docs/MANIFEST.md) |
-| Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](RUNBOOK.md). Open items are not listed publicly yet |
+| Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md). Open items are not listed publicly yet |
 | Live money | Off. Live keys are refused unless the service is started with `PARMANA_ALLOW_LIVE_KEYS=true` |
 | Migration out of parmana-core (ADR-0018), as of 3 November 2026 | Six connector folders on `main`: Razorpay, Paytm, Slack, GitHub, HubSpot, Zerodha (paper only, no live mode). Removed from parmana-core: Zerodha (#295), Slack (#296), Paytm (#297), GitHub (#299), HubSpot (#300). Registrations in parmana-core still open: Razorpay, GitHub, HubSpot, Slack. Paytm needs none. The status of each registration is listed above, and the steps are in the connector READMEs |
 
@@ -68,7 +68,7 @@ It runs the code that performs approved actions in business systems. Each vendor
 | [src/connectors/razorpay/README.md](src/connectors/razorpay/README.md) | The `razorpay:refund` capability: request, credential, behaviour, answer, errors |
 | [docs/MANIFEST.md](docs/MANIFEST.md) | The manifest format and engine (tested, not used by a connector yet) |
 | [SETUP.md](SETUP.md) | The Vercel project and every environment variable |
-| [RUNBOOK.md](RUNBOOK.md) | Deploying, verifying, shipping a change, troubleshooting, and recovering a release that was recorded but not confirmed |
+| [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md) | Deploying, verifying, shipping a change, troubleshooting, and recovering a release that was recorded but not confirmed |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Branches, sign-off, checks, CI and how to add a connector |
 | [SECURITY.md](SECURITY.md) | How to report a vulnerability |
 
@@ -112,7 +112,7 @@ For `POST /execute`, a release must pass every check before the connector runs: 
 
 A release that passes runs the connector once. A refused release returns `403` with every reason found, and nothing runs. The full list of checks, answers, status codes and limits is in [docs/API.md](docs/API.md).
 
-**Known limit.** A release is recorded before the connector runs. If the process stops after the record and before the connector finishes, that release is refused on every later attempt, and the operator must check the business system by hand. This is the price of acting at most once. [RUNBOOK.md](RUNBOOK.md) has the steps.
+**Known limit.** A release is recorded before the connector runs. If the process stops after the record and before the connector finishes, that release is refused on every later attempt, and the operator must check the business system by hand. This is the price of acting at most once. [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md) has the steps.
 
 `GET /health` returns `{"status":"UP"}`. It shows that the process is running. It does not check the database or the business system.
 
@@ -175,7 +175,7 @@ These rules keep connectors separate from each other and from the manifest engin
 2. Make the connector act once. If the business system can repeat an action, check for an existing result before acting, keyed by the `businessTransactionId`. The Razorpay connector does this with the refund receipt.
 3. Refuse anything outside what the capability allows before any call is made: wrong target, wrong amount, wrong credential format.
 4. Add its credential to `src/service/registry.ts`: the environment variable, the check, the factory, and a case in each switch. The service cannot select a connector without them.
-5. Add the connector's variable to `.env.example`, to the table in this README, and to [SETUP.md](SETUP.md). Add it to the Vercel environment as described in [RUNBOOK.md](RUNBOOK.md).
+5. Add the connector's variable to `.env.example`, to the table in this README, and to [SETUP.md](SETUP.md). Add it to the Vercel environment as described in [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md).
 6. Add tests under `tests/connectors/<vendor>/` against a fake of the vendor's API, covering the refusals, the repeat case, and an error from the vendor that does not leak the credential.
 7. Document the connector in `src/connectors/<vendor>/README.md`, the way [the Razorpay README](src/connectors/razorpay/README.md) does.
 8. Run `npm test`. The boundary test must pass.

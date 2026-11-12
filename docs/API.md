@@ -109,7 +109,7 @@ A repeat that arrives while the first run is still in progress, or after the fir
 }
 ```
 
-Only the error code leaves the service. For a failure that is not a connector error, the text is `connector failed`. The connector's own message is written to the log, not returned (see [Logs](#logs)). The release stays recorded, so it cannot be sent again. Check the business system before doing anything else. [RUNBOOK.md](../RUNBOOK.md) describes how.
+Only the error code leaves the service. For a failure that is not a connector error, the text is `connector failed`. The connector's own message is written to the log, not returned (see [Logs](#logs)). The release stays recorded, so it cannot be sent again. Check the business system before doing anything else. [RUNBOOK.md](../src/connectors/razorpay/RUNBOOK.md) describes how.
 
 If the connector's answer is larger than 16 KB, the service returns `200` with `success: false` and `result` set to `{"error":"result is larger than 16 KB"}`.
 
