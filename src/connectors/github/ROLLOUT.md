@@ -16,7 +16,7 @@ Last updated after the runbook move (#76) merged to `main`.
 | Rollout plan (this file) | Merged to `main` (#73) |
 | Public workflow (`docs/WORKFLOW.md`) | Merged to `main` (#75) |
 | Runbook move into connector folders | Merged to `main` (#76) |
-| `github-pr-comment` policy | parmana-core #605, draft. Commit signed (`4e7ea91`). Push of the signed commit pending |
+| `github-pr-comment` policy | parmana-core #605, draft. Signed commit `4e7ea91` is on the branch. Not yet approved in production or in the governance log |
 | Production policy approval | Not started |
 | Governance log entry | Not started |
 | Separate GitHub deployment | Not started |
