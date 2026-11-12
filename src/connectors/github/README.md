@@ -10,6 +10,7 @@ A connector that lets an AI agent read and merge GitHub pull requests only when 
 |---|---|---|
 | `github:pr-fetch` | `github-pr-read` 1.1.0 | Reads mergeable state, merge time, head SHA and base branch. Read-only. |
 | `github:pr-merge` | `github-pr-approval` 1.1.0 | Merges with `merge`, `squash` or `rebase`. Optionally refuses if the head SHA has moved. |
+| `github:comment` | `github-pr-comment` (not yet defined) | Posts one comment with the `body` parameter, up to 4,000 characters. Not sent again if the first call's answer is lost. |
 
 Targets use the form `owner/repo#number`.
 

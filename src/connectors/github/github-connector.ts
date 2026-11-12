@@ -11,6 +11,8 @@ import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest, 
  * - `github:pr-merge` merges a pull request. Merge methods are limited to
  *   merge, squash and rebase. If `expectedHeadSha` is given, GitHub refuses the
  *   merge when the head has moved since the decision was made.
+ * - `github:comment` posts one comment on a pull request. The comment body is
+ *   limited to 4,000 characters.
  *
  * Authentication is a GitHub App. The credential value is
  * "<app id>:<installation id>:<base64 of the App's PEM private key>". For each
@@ -24,12 +26,15 @@ import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest, 
 
 export const GITHUB_PR_FETCH_CAPABILITY = "github:pr-fetch";
 export const GITHUB_PR_MERGE_CAPABILITY = "github:pr-merge";
+export const GITHUB_COMMENT_CAPABILITY = "github:comment";
 
 const DEFAULT_BASE_URL = "https://api.github.com";
 const DEFAULT_BUDGET_MS = 10_000;
 const MERGE_METHODS: ReadonlySet<string> = new Set(["merge", "squash", "rebase"]);
 const FETCH_PARAMETERS: ReadonlySet<string> = new Set([]);
 const MERGE_PARAMETERS: ReadonlySet<string> = new Set(["mergeMethod", "expectedHeadSha"]);
+const COMMENT_PARAMETERS: ReadonlySet<string> = new Set(["body"]);
+const COMMENT_MAX_LENGTH = 4000;
 const TARGET = /^([A-Za-z0-9-]{1,39})\/([A-Za-z0-9._-]{1,100})#(\d{1,10})$/;
 const HEAD_SHA = /^[0-9a-f]{40}$/;
 const USER_AGENT = "parmana-connector-github";
@@ -119,7 +124,7 @@ export function createGitHubConnector(options: GitHubConnectorOptions = {}): Gen
     return body.token;
   }
 
-  async function call(path: string, method: "GET" | "PUT", token: string, signal: AbortSignal, body?: Record<string, unknown>): Promise<Response> {
+  async function call(path: string, method: "GET" | "PUT" | "POST", token: string, signal: AbortSignal, body?: Record<string, unknown>): Promise<Response> {
     return doFetch(`${baseUrl}${path}`, {
       method,
       signal,
@@ -135,10 +140,17 @@ export function createGitHubConnector(options: GitHubConnectorOptions = {}): Gen
 
   return {
     system: "github",
-    capabilities: [GITHUB_PR_FETCH_CAPABILITY, GITHUB_PR_MERGE_CAPABILITY],
+    capabilities: [GITHUB_PR_FETCH_CAPABILITY, GITHUB_PR_MERGE_CAPABILITY, GITHUB_COMMENT_CAPABILITY],
 
     async execute(request: ConnectorRequest, context: ConnectorExecutionContext): Promise<ConnectorResponse> {
-      const allowed = request.capability === GITHUB_PR_FETCH_CAPABILITY ? FETCH_PARAMETERS : request.capability === GITHUB_PR_MERGE_CAPABILITY ? MERGE_PARAMETERS : null;
+      const allowed =
+        request.capability === GITHUB_PR_FETCH_CAPABILITY
+          ? FETCH_PARAMETERS
+          : request.capability === GITHUB_PR_MERGE_CAPABILITY
+            ? MERGE_PARAMETERS
+            : request.capability === GITHUB_COMMENT_CAPABILITY
+              ? COMMENT_PARAMETERS
+              : null;
       if (allowed === null) {
         throw new ConnectorError("unknown_capability", `The GitHub connector does not run "${request.capability}".`);
       }
@@ -162,6 +174,15 @@ export function createGitHubConnector(options: GitHubConnectorOptions = {}): Gen
         mergeBody = { merge_method: method, ...(expected !== undefined ? { sha: expected } : {}) };
       }
 
+      let commentBody: string | undefined;
+      if (request.capability === GITHUB_COMMENT_CAPABILITY) {
+        const body = request.parameters["body"];
+        if (typeof body !== "string" || body.trim().length === 0 || body.length > COMMENT_MAX_LENGTH) {
+          refuse(`body must be a non-empty string of at most ${COMMENT_MAX_LENGTH} characters.`);
+        }
+        commentBody = body;
+      }
+
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), context.timeoutMs > 0 ? context.timeoutMs : DEFAULT_BUDGET_MS);
       const pullPath = `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/pulls/${pullNumber}`;
@@ -169,6 +190,31 @@ export function createGitHubConnector(options: GitHubConnectorOptions = {}): Gen
       try {
         const token = await mintInstallationToken(credential, controller.signal);
         const fingerprint = githubTokenFingerprint(token);
+
+        if (commentBody !== undefined) {
+          // A comment is posted once. If the request may have reached GitHub but no answer was read,
+          // the error says so, and nothing is retried here.
+          let response: Response;
+          try {
+            response = await call(`${pullPath.replace("/pulls/", "/issues/")}/comments`, "POST", token, controller.signal, { body: commentBody });
+          } catch {
+            throw new ConnectorError("upstream_error", "The comment may have reached GitHub, and no answer was read. Check the pull request before any other action.");
+          }
+          if (!response.ok) {
+            throw new ConnectorError("upstream_error", `GitHub did not post the comment (HTTP ${response.status}). Check the pull request before any other action.`);
+          }
+          const created = (await response.json().catch(() => undefined)) as Record<string, unknown> | undefined;
+          if (typeof created?.["id"] !== "number") {
+            throw new ConnectorError("upstream_error", "GitHub answered without confirming the comment. Check the pull request before any other action.");
+          }
+          return {
+            success: true,
+            metadata: {
+              status: response.status,
+              body: { commentId: created["id"], url: typeof created["html_url"] === "string" ? created["html_url"] : null, tokenFingerprint: fingerprint },
+            },
+          };
+        }
 
         if (mergeBody === undefined) {
           const response = await call(pullPath, "GET", token, controller.signal);
