@@ -12,7 +12,9 @@ const CREDENTIAL = `424242:${INSTALLATION_ID}:${Buffer.from(PEM, "utf8").toStrin
 const INSTALL_TOKEN = "fake-installation-token-for-comment-tests";
 const TARGET = "pavancharak/parmana-github-test#7";
 
-function fakeGitHub(options: { commentStatus?: number; commentFails?: boolean; tokenStatus?: number } = {}) {
+function fakeGitHub(
+  options: { commentStatus?: number; commentFails?: boolean; commentHangs?: boolean; commentReply?: string; tokenStatus?: number } = {},
+) {
   const posted: { path: string; body: unknown; authorization: string | undefined }[] = [];
   const doFetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -24,6 +26,13 @@ function fakeGitHub(options: { commentStatus?: number; commentFails?: boolean; t
     if (url.pathname === "/repos/pavancharak/parmana-github-test/issues/7/comments" && init?.method === "POST") {
       posted.push({ path: url.pathname, body: JSON.parse(String(init.body)), authorization: headers["authorization"] });
       if (options.commentFails) throw new Error("connection reset");
+      if (options.commentHangs) {
+        // Never answers; the connector's timeout must abort the wait.
+        return new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => reject(new Error("aborted")));
+        });
+      }
+      if (options.commentReply !== undefined) return new Response(options.commentReply, { status: options.commentStatus ?? 201 });
       return new Response(JSON.stringify({ id: 555, html_url: "https://github.com/pavancharak/parmana-github-test/pull/7#issuecomment-555" }), {
         status: options.commentStatus ?? 201,
       });
@@ -39,7 +48,7 @@ function request(parameters: Record<string, unknown>, target: string | undefined
   return { capability: GITHUB_COMMENT_CAPABILITY, parameters, target, businessTransactionId: "btx-1" };
 }
 
-describe("github:comment", "is listed with the other GitHub capabilities", () => {
+describe("github:comment is listed", () => {
   it("is advertised", () => {
     expect(createGitHubConnector().capabilities).toContain(GITHUB_COMMENT_CAPABILITY);
   });
@@ -105,6 +114,36 @@ describe("github:comment posts one comment", () => {
     const fake = fakeGitHub({ commentStatus: 403 });
     const connector = createGitHubConnector({ fetch: fake.fetch, baseUrl: "https://gh.test" });
     await expect(connector.execute(request({ body: "ok" }), context)).rejects.toMatchObject({ code: "upstream_error" });
+  });
+
+  it("accepts a body of exactly the maximum length", async () => {
+    const fake = fakeGitHub();
+    await createGitHubConnector({ fetch: fake.fetch, baseUrl: "https://gh.test" }).execute(request({ body: "x".repeat(4000) }), context);
+    expect(fake.posted).toHaveLength(1);
+  });
+
+  it("reports a reply that carries no comment id as unconfirmed, and does not retry", async () => {
+    const fake = fakeGitHub({ commentReply: JSON.stringify({ message: "ok" }) });
+    const connector = createGitHubConnector({ fetch: fake.fetch, baseUrl: "https://gh.test" });
+    await expect(connector.execute(request({ body: "ok" }), context)).rejects.toMatchObject({ code: "upstream_error" });
+    expect(fake.posted).toHaveLength(1);
+  });
+
+  it("reports a reply that is not JSON as unconfirmed, and does not retry", async () => {
+    const fake = fakeGitHub({ commentReply: "<html>bad gateway</html>" });
+    const connector = createGitHubConnector({ fetch: fake.fetch, baseUrl: "https://gh.test" });
+    await expect(connector.execute(request({ body: "ok" }), context)).rejects.toMatchObject({ code: "upstream_error" });
+    expect(fake.posted).toHaveLength(1);
+  });
+
+  it("reports a comment that never gets an answer as possibly sent, once the timeout passes", async () => {
+    const fake = fakeGitHub({ commentHangs: true });
+    const connector = createGitHubConnector({ fetch: fake.fetch, baseUrl: "https://gh.test" });
+    const hungContext: ConnectorExecutionContext = { ...context, timeoutMs: 50 };
+    const error = await connector.execute(request({ body: "ok" }), hungContext).catch((e: unknown) => e);
+    expect(error).toMatchObject({ code: "upstream_error" });
+    expect(String((error as Error).message)).toContain("may have reached GitHub");
+    expect(fake.posted).toHaveLength(1);
   });
 
   it("refuses when GitHub will not issue a token, without showing the credential", async () => {
