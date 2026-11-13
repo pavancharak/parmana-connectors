@@ -7,7 +7,7 @@ This file lists what must happen, in order, before the `github:comment` capabili
 - **One connector per process.** The connectors service runs one connector, chosen by `PARMANA_CONNECTOR`. The GitHub connector therefore needs its own deployment. The Razorpay deployment must not be reused.
 - **Base64 credential.** `GITHUB_APP_CREDENTIAL` is `<app id>:<installation id>:<base64 PEM>`. A raw PEM is refused, because its line breaks do not fit in an environment variable.
 - **Least privilege.** Start with Pull requests: read and write, and no Contents access, which only `github:pr-merge` needs.
-- **Policy approval per text.** The `github-pr-comment` policy approves a comment only for the exact text and target that a trusted person approved.
+- **Two approvals per comment.** The `github-pr-comment` policy approves a comment only when a trusted person has approved the exact target and a second approval covers the exact comment text (parmana-core #608).
 - **Comments are not retried.** If the answer to a post is lost, the connector reports that the comment may have been posted, and does not send it again.
 - **Signed commits on `main`.** Every commit that reaches `main` must be signed. Sign-off (DCO) is required as well.
 - **Merging is a human step.** No merge happens without the person responsible for the repository.
@@ -25,10 +25,10 @@ This file lists what must happen, in order, before the `github:comment` capabili
 | --- | --- | --- | --- | --- |
 | 1 | Sign the #72 commits with GPG and push | Operator, on their PC | `main` requires signed commits | Now |
 | 2 | Merge #72 | Operator, or the team | Makes the marker available to recovery | After 1 |
-| 3 | Sign the #605 commit with GPG and push | Operator, on their PC | Same signing rule, for `parmana-core` | Now |
+| 3 | Sign the #608 commit with GPG and push | Operator, on their PC | Same signing rule, for `parmana-core` | Now |
 | 4 | Propose `github-pr-comment` 1.0.0 in the production maker-checker flow, with a second approver | Operator, plus a second person | The CI gate fails a policy with no logged production approval. The threat model says one person holds both roles today, so a second approver must be arranged first | Independent of 1–3 |
-| 5 | Export the approval to the governance log with the read-only `CI_DATABASE_URL`, verify it, and push the change to #605 | Operator | Makes `verify-policy-approvals` pass | After 4 |
-| 6 | Merge #605 | Operator, or the team, once the gate is green | The policy must be in `main` before the registration names it | After 5 |
+| 5 | Export the approval to the governance log with the read-only `CI_DATABASE_URL`, verify it, and push the change to #608 | Operator | Makes `verify-policy-approvals` pass | After 4 |
+| 6 | Merge #608 | Operator, or the team, once the gate is green | The policy must be in `main` before the registration names it | After 5 |
 | 7 | Deploy a **separate** Vercel project for GitHub, with `PARMANA_CONNECTOR=github` and `GITHUB_APP_CREDENTIAL` | Operator | One connector runs per process. The existing production project runs Razorpay, so GitHub cannot share it | After 2 |
 | 8 | Propose the `github:comment` registration in core, with the GitHub project's endpoint and policy `github-pr-comment` 1.0.0 | Maker | Registration is maker-checker | After 6 and 7 |
 | 9 | Approve the registration with a step-up signature | Checker, a second person | The maker cannot approve their own change | After 8 |

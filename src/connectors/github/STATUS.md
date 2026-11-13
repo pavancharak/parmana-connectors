@@ -17,10 +17,10 @@ Last updated after the `github:comment` edge-case tests were pushed to `claude/o
 | Public workflow (`docs/WORKFLOW.md`) | Merged to `main` (#75) |
 | Runbook move into connector folders | Merged to `main` (#76) |
 | `github:comment` edge-case unit tests (31 GitHub tests in total) | On `claude/optimistic-cori-hmha8u` (59fc43a), not yet merged to `main` |
-| `github-pr-comment` policy | Built in parmana-core #605 (draft). Signed commit `4e7ea91` is on the branch |
+| `github-pr-comment` policy | Revised in parmana-core #608 with two approvals per comment (target and body). Replaces the earlier draft #605 |
 | `github-pr-comment` production approval (maker-checker) | Pending. Needs a second approver |
 | Governance log entry | Not started. Waits on the approval |
-| Merge of parmana-core #605 | Not started. Waits on the approval and the log entry |
+| Merge of parmana-core #608 | Not started. Waits on the approval and the log entry |
 | Separate GitHub deployment | Not started |
 | Core registration of `github:comment` | Not started |
 | Live test on a real PR | Not run. The unit tests do not contact GitHub |
@@ -42,3 +42,4 @@ What was built, in order, and why each decision was made.
 | Nov 2026 | #77, #78 | Status and history brought up to date; signed policy commit recorded on the branch | Keeps the rollout record in step with the branch |
 | Nov 2026 | 59fc43a (branch) | Edge-case tests for `github:comment`: reply without id, reply that is not JSON, timeout, maximum body length | These paths had no test; the describe name was also fixed |
 | Nov 2026 | parmana-core #605 | `github-pr-comment` 1.0.0 policy added, with a test | The registration names the policy, so it must exist in core first |
+| Nov 2026 | parmana-core #608 | `github-pr-comment` 1.0.0 revised to two approvals (target and body), with unit and end-to-end verifier tests | The first version bound the approval to the body as a number, so every comment was refused, and it did not bind the body text at all |

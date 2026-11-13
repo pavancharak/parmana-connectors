@@ -122,13 +122,19 @@ The maker cannot approve their own change. This is the same flow as the tutorial
 
 ### Current status
 
-- Policy PR: [parmana-core#605](https://github.com/pavancharak/parmana-core/pull/605), a draft. It has an unsigned commit, and it fails `verify-policy-approvals` until 4a is done.
+- Policy PR: [parmana-core#608](https://github.com/pavancharak/parmana-core/pull/608). It replaces the earlier draft #605. It has two approvals per comment, and its unit and verifier tests cover both. It fails `verify-policy-approvals` until 4a is done.
+- Policy PR checks: the full build, typecheck and test suite have not yet been run on the branch.
 - Policy approval in production: not yet proposed.
 - Registration: not started.
 
 ## Step 5: how a comment is approved
 
-The `github-pr-comment` policy allows a comment only with a signed approval from a trusted person. The approval covers the **exact comment text** and the **exact target** (`owner/repo#number`). Changing one word of the text needs a new approval.
+The `github-pr-comment` policy allows a comment only with **two** signed approvals from trusted people:
+
+1. a **target approval** for the exact pull request (`owner/repo#number`), and
+2. a **body approval** for the exact comment text.
+
+Changing one word of the text needs a new body approval. A target approval for one pull request cannot be used on another.
 
 A person approves in the Parmana approval flow. Do not approve a comment you have not read in full.
 

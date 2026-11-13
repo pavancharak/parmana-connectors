@@ -15,6 +15,15 @@ A request posts **one** comment on one pull request, through the GitHub App's in
 
 A request that breaks a rule is refused before any call to GitHub. Its error names the rule, and never shows the credential.
 
+## What authorizes a comment
+
+The `github-pr-comment` policy needs **two** signed approvals from trusted people:
+
+- a **target approval** for the exact pull request (`owner/repo#number`), and
+- a **body approval** for the exact comment text.
+
+Each approval is checked on its own. A comment is refused if either one is missing, is for another pull request, or is for different text. Changing one word of the text needs a new body approval.
+
 ## What is posted
 
 The text GitHub receives is your `body`, then a blank line, then a hidden marker:
