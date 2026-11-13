@@ -4,7 +4,7 @@ Current state of the GitHub connector and its rollout. The plan and the steps ar
 
 ## Status
 
-Last updated after the `github:comment` edge-case tests were pushed to `claude/optimistic-cori-hmha8u` (59fc43a).
+Last updated after the `github:comment` edge-case tests were merged to `main` (#79).
 
 | Part | State |
 | --- | --- |
@@ -16,7 +16,7 @@ Last updated after the `github:comment` edge-case tests were pushed to `claude/o
 | Rollout plan (`ROLLOUT.md`) | Merged to `main` (#73) |
 | Public workflow (`docs/WORKFLOW.md`) | Merged to `main` (#75) |
 | Runbook move into connector folders | Merged to `main` (#76) |
-| `github:comment` edge-case unit tests (31 GitHub tests in total) | On `claude/optimistic-cori-hmha8u` (59fc43a), not yet merged to `main` |
+| `github:comment` edge-case unit tests (31 GitHub tests in total) | Merged to `main` (#79) |
 | `github-pr-comment` policy | Built in parmana-core #605 (draft). Signed commit `4e7ea91` is on the branch |
 | `github-pr-comment` production approval (maker-checker) | Pending. Needs a second approver |
 | Governance log entry | Not started. Waits on the approval |
@@ -40,5 +40,5 @@ What was built, in order, and why each decision was made.
 | Nov 2026 | #75 | `docs/WORKFLOW.md` added; links to a private `STEPS.md` removed | `STEPS.md` is ignored on purpose as private (#33), so public steps go in a tracked file |
 | Nov 2026 | #76 | Razorpay deployment runbook moved to `src/connectors/razorpay/` | It is a connector deployment runbook, and it sits with its connector |
 | Nov 2026 | #77, #78 | Status and history brought up to date; signed policy commit recorded on the branch | Keeps the rollout record in step with the branch |
-| Nov 2026 | 59fc43a (branch) | Edge-case tests for `github:comment`: reply without id, reply that is not JSON, timeout, maximum body length | These paths had no test; the describe name was also fixed |
+| Nov 2026 | #79 | Edge-case tests for `github:comment`: reply without id, reply that is not JSON, timeout, maximum body length; status moved to this file | These paths had no test; the describe name was also fixed |
 | Nov 2026 | parmana-core #605 | `github-pr-comment` 1.0.0 policy added, with a test | The registration names the policy, so it must exist in core first |
