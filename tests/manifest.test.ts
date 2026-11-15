@@ -118,6 +118,17 @@ describe("manifest loading and validation", () => {
     if (!result.ok) expect(result.errors.map((e) => e.message)).toContain("a GET capability cannot be a write");
   });
 
+  it.each(["POST", "PUT", "PATCH", "DELETE"])("refuses a read capability that uses %s", (method) => {
+    const text = HEADER_MANIFEST.replace("method: GET\n    path: /things/{id}\n    effect: read", `method: ${method}\n    path: /things/{id}\n    effect: read`);
+    const result = loadManifest(text);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.map((e) => e.message)).toContain("a read capability must use GET");
+  });
+
+  it("accepts a read capability that uses GET", () => {
+    expect(loadManifest(HEADER_MANIFEST).ok).toBe(true);
+  });
+
   it("refuses a capability id that does not start with the system name, and a duplicate id", () => {
     const wrongPrefix = loadManifest(HEADER_MANIFEST.replace("id: example:create-thing", "id: other:create-thing"));
     expect(wrongPrefix.ok).toBe(false);

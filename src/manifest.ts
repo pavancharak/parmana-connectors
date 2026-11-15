@@ -114,6 +114,9 @@ function semanticChecks(m: Manifest, options: ValidateOptions): ManifestError[] 
     if (cap.method === "GET" && cap.effect === "write") {
       errors.push({ path: `${at}/effect`, message: "a GET capability cannot be a write" });
     }
+    if (cap.effect === "read" && cap.method !== "GET") {
+      errors.push({ path: `${at}/method`, message: "a read capability must use GET" });
+    }
 
     const input = cap.input ?? {};
     if (cap.effect === "write" && Object.keys(input).length === 0) {
