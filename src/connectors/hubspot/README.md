@@ -104,6 +104,8 @@ Confirm that the policy version is in effect on your instance before you test. S
 
 - **Not yet verified live:** the request shapes have not been checked against a live HubSpot portal. Treat the first production run as a test.
 - **Caller-supplied stage:** the stage-path check depends on the caller's `currentDealStage`. See Policies above.
+- **Target check depends on the target being present (F28-4, open):** the deal id is compared with the release target only when a target is present. The release shape normally requires one, but the check should not depend on that. The governance review rates this as a conditional check, and it is open, with no fix branch.
+- **Not reviewed in depth:** the governance review did not review this connector in depth. Its behaviour on a repeated action has not been reviewed, and the connectors README lists repeat actions as an open item.
 - **Direct access:** a HubSpot call made outside Parmana is not checked or recorded.
 - **Token exposure:** on a shared host, code that can read the server's environment can read the token. Run the connector on a host you control.
 
