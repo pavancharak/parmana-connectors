@@ -1,6 +1,6 @@
 # Razorpay connector: test-mode demo
 
-This guide covers the `razorpay:refund` connector in this folder. It explains what is ready, what is not, and how to run the test-mode check on your own machine.
+This guide covers the `payments:refund` connector in this folder. It explains what is ready, what is not, and how to run the test-mode check on your own machine.
 
 Test-mode refunds move no money. Live money is switched off in this repository.
 

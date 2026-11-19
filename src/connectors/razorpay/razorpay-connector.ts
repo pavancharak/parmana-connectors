@@ -14,7 +14,7 @@ import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest, 
  * caller allows them. Amounts are in paise.
  */
 
-export const RAZORPAY_REFUND_CAPABILITY = "razorpay:refund";
+export const RAZORPAY_REFUND_CAPABILITY = "payments:refund";
 
 const API = "https://api.razorpay.com/v1";
 /** The time limit when the caller gives none. The service always gives one. */

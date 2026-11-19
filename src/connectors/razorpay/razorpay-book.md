@@ -5,7 +5,7 @@ A working book about how Razorpay is connected to Parmana: what was built, what 
 **Status as of 2026-11-08.** Read this first.
 
 - **Removed from `parmana-core`.** The Razorpay refund demo and its database tables were removed from core on 2026-08-12 and 2026-09-16.
-- **Lives in `parmana-connectors`.** The current `razorpay:refund` connector is in that repository, at `src/connectors/razorpay/`. It was built and tested against a fake Razorpay, and run in Razorpay's test mode on 29 October 2026 (4 of 4 checks passed). It has not been run with live keys.
+- **Lives in `parmana-connectors`.** The current `payments:refund` connector is in that repository, at `src/connectors/razorpay/`. It was built and tested against a fake Razorpay, and run in Razorpay's test mode on 29 October 2026 (4 of 4 checks passed). It has not been run with live keys.
 - **In review in `parmana-core`.** A read-only Razorpay payment signal source and draft refund policies are on the branch `feat/razorpay-payment-signal`, in pull request #512. It is not merged, and its required checks are failing.
 - **Never live.** No Razorpay refund in these repositories has moved live money. The connector refuses `rzp_live_` keys unless `PARMANA_ALLOW_LIVE_KEYS=true`.
 
@@ -59,7 +59,7 @@ Before the removal there were many Razorpay pull requests, from #59 (the refund 
 **Parmana terms used in this book**
 
 - **Policy.** A versioned set of rules. A policy names the capabilities it allows and the facts (signals) it needs before it approves.
-- **Capability.** A named action, for example `razorpay:refund`.
+- **Capability.** A named action, for example `payments:refund`.
 - **Signal.** A fact a policy checks. A signal can be declared by the caller, approved by a human, or established by an independent source. Only the last two are trusted for money movement.
 - **Approval.** A human's signature, made through the approval flow, that covers one action on one target for a stated amount.
 - **Release.** Parmana's signed instruction that tells a connector to act.
@@ -97,8 +97,8 @@ Policy needs "payment.refundable"  ──▶ Razorpay payment signal source (rea
 
 1. **The agent asks for a refund.** The agent checks the payment id against `pay_` plus 6 to 40 letters or digits, and the amount against a positive whole number of paise. A bad input is refused before any call.
 2. **Parmana evaluates the policy.** It refuses the request unless a manager's signed approval covers this payment and this amount.
-3. **Parmana signs a release.** The release names `razorpay:refund`, the payment id as its target, the amount in paise, and the approvals used.
-4. **The endpoint verifies the release.** It checks Parmana's signature, that the release names the endpoint's own URL as its audience, and that the capability is `razorpay:refund`. Any failure returns HTTP 401, and nothing is refunded.
+3. **Parmana signs a release.** The release names `payments:refund`, the payment id as its target, the amount in paise, and the approvals used.
+4. **The endpoint verifies the release.** It checks Parmana's signature, that the release names the endpoint's own URL as its audience, and that the capability is `payments:refund`. Any failure returns HTTP 401, and nothing is refunded.
 5. **The endpoint checks whether the refund already exists.** It lists the payment's refunds. If one carries this release's `businessTransactionId` as its receipt, it returns that refund and does not create another.
 6. **The endpoint creates the refund.** It calls Razorpay's refund endpoint with the same receipt and the amount in paise. Each Razorpay call has a 4-second timeout, so two calls fit inside the 10-second connector timeout Parmana registers.
 7. **The answer is recorded.** The endpoint's answer returns to Parmana and is kept in the signed record as the endpoint's claim.
@@ -119,8 +119,8 @@ The endpoint refuses any key that does not start with `rzp_test_`, and it refuse
 1. Build the endpoint with `build-endpoint.ts`, giving it Parmana's public key and the endpoint's own URL. Deploy it to Vercel. A release made for any other URL is refused, so the URL written into the build must be the deployed one.
 2. Check the deployed endpoint refuses an empty request. It should answer with an error saying the body is not a `{ release, signature }` pair.
 3. Propose the policy `razorpay-refund` 1.0.0 with the governance script, then have a checker approve it.
-4. Propose the capability `razorpay:refund`, bound to the endpoint URL and the policy, with `amount` as its allowed parameter. A checker approves it.
-5. Generate an agent key that may use only `razorpay:refund`. Store it in a password manager. Deploy the updated key list to Parmana's API.
+4. Propose the capability `payments:refund`, bound to the endpoint URL and the policy, with `amount` as its allowed parameter. A checker approves it.
+5. Generate an agent key that may use only `payments:refund`. Store it in a password manager. Deploy the updated key list to Parmana's API.
 6. Propose and approve a grant for the agent: up to 500 paise per refund, valid for seven days.
 7. Run the four demo cases above.
 
@@ -220,7 +220,7 @@ npx prettier --check .
 | "This demo refunds only in Razorpay test mode: RAZORPAY_KEY_ID must start with rzp_test_." | A live key is configured                                                         | Use a `rzp_test_` key. Never put a live key in this demo                                         |
 | "RAZORPAY_KEY_SECRET is not set."                                                          | The endpoint's secret is empty                                                   | Set it in the endpoint's environment, not in the agent                                           |
 | Endpoint returns 401 with signature or audience errors                                     | The release is not signed by Parmana's key, or it names a different endpoint URL | Rebuild the endpoint with `build-endpoint.ts`, so the public key and URL match the deployment    |
-| Endpoint returns 401 "this endpoint serves only razorpay:refund"                           | The release carries a different capability                                       | Check the capability name in the policy                                                          |
+| Endpoint returns 401 "this endpoint serves only payments:refund"                           | The release carries a different capability                                       | Check the capability name in the policy                                                          |
 | Parmana refuses and Razorpay is not called                                                 | No valid manager approval for this payment and amount                            | Obtain a signed approval that names this payment and amount                                      |
 | Refund reports `alreadyRefunded: true`                                                     | A refund with this receipt already exists                                        | Expected. The same release cannot refund twice                                                   |
 | Signal source: "does not establish the claim"                                              | A policy asked for a fact this source does not provide                           | Check the claim name in the policy                                                               |

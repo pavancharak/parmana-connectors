@@ -28,7 +28,7 @@ It runs the code that performs approved actions in business systems. Each vendor
 
 | Connector | Capability | Mode |
 | --- | --- | --- |
-| Razorpay | `razorpay:refund` | Razorpay test mode only |
+| Razorpay | `payments:refund` | Razorpay test mode only |
 | Paytm | `paytm:refund` | Paytm staging only |
 | Slack | `slack:post-message` | Not run against a live workspace yet |
 | GitHub | `github:pr-fetch`, `github:pr-merge` | GitHub App; not run against a live app yet |
@@ -55,7 +55,7 @@ It runs the code that performs approved actions in business systems. Each vendor
 | Part | State |
 | --- | --- |
 | Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built and tested. Deployed to Vercel production at `https://parmana-connectors.vercel.app`, with no production traffic yet |
-| Razorpay connector (`razorpay:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 29 October 2026: 4 of 4 checks passed. Not run with live keys. No signed release has yet been run end to end through the deployed service |
+| Razorpay connector (`payments:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 29 October 2026: 4 of 4 checks passed. Not run with live keys. No signed release has yet been run end to end through the deployed service |
 | Manifest engine (`src/manifest.ts`, `src/connector.ts`) | Built and covered by unit tests. Not used by any connector in the service yet. See [docs/MANIFEST.md](docs/MANIFEST.md) |
 | Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md). Open items are not listed publicly yet |
 | Live money | Off. Live keys are refused unless the service is started with `PARMANA_ALLOW_LIVE_KEYS=true` |
@@ -68,7 +68,7 @@ It runs the code that performs approved actions in business systems. Each vendor
 | --- | --- |
 | This README | What the repository is, how to run the service, and the layout |
 | [docs/API.md](docs/API.md) | The HTTP routes, the signed release, every answer, the limits and the log events |
-| [src/connectors/razorpay/README.md](src/connectors/razorpay/README.md) | The `razorpay:refund` capability: request, credential, behaviour, answer, errors |
+| [src/connectors/razorpay/README.md](src/connectors/razorpay/README.md) | The `payments:refund` capability: request, credential, behaviour, answer, errors |
 | [src/connectors/zoho/README.md](src/connectors/zoho/README.md) | The `zoho:invoice-fetch` and `zoho:invoice-create` capabilities: configuration, idempotency, test run, open items |
 | [docs/MANIFEST.md](docs/MANIFEST.md) | The manifest format and engine (tested, not used by a connector yet) |
 | [SETUP.md](SETUP.md) | The Vercel project and every environment variable |
@@ -181,7 +181,7 @@ Read [docs/ADDING-A-CONNECTOR.md](docs/ADDING-A-CONNECTOR.md). It covers the two
 
 ## Razorpay connector
 
-`src/connectors/razorpay/razorpay-connector.ts` exports `createRazorpayConnector`, which implements `razorpay:refund`. It refunds a payment once: each refund carries the release's `businessTransactionId` as its receipt, and a repeat returns the existing refund instead of creating another. Refusals happen before any call to Razorpay, live keys are refused unless allowed, and the caller receives only the error code. The connector reads up to 1,000 refunds to look for an earlier one, and refuses rather than guess beyond that. A failure after a refund may have been sent says to check Razorpay before any other action. The full behaviour, its limits, the answer and the error codes are in [its README](src/connectors/razorpay/README.md).
+`src/connectors/razorpay/razorpay-connector.ts` exports `createRazorpayConnector`, which implements `payments:refund`. It refunds a payment once: each refund carries the release's `businessTransactionId` as its receipt, and a repeat returns the existing refund instead of creating another. Refusals happen before any call to Razorpay, live keys are refused unless allowed, and the caller receives only the error code. The connector reads up to 1,000 refunds to look for an earlier one, and refuses rather than guess beyond that. A failure after a refund may have been sent says to check Razorpay before any other action. The full behaviour, its limits, the answer and the error codes are in [its README](src/connectors/razorpay/README.md).
 
 ## Razorpay test-mode run
 

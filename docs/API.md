@@ -27,7 +27,7 @@ parmana-core POSTs a JSON body with two keys, `release` and `signature`:
     "audience": "https://parmana-connectors.vercel.app/api/execute",
     "businessTransactionId": "txn-...",
     "authorizationId": "...",
-    "capability": "razorpay:refund",
+    "capability": "payments:refund",
     "target": "pay_...",
     "parameters": { "amount": 100 },
     "policy": { },
@@ -58,7 +58,7 @@ The service reads these fields:
 | `signature.keyId` | Must be `default` |
 | `signature.value` | Base64 signature over the canonical serialization of `release` (from `@parmana/crypto`) |
 
-`connectorId` must be `ext-` followed by the release's `capability`, for example `ext-razorpay:refund`. This is the identity parmana-core signs for an external release. The other fields (`authorizationId`, `policy`, `approvedBy`, `issuedAt`, `conditions`) are not checked by this service. They are covered by the signature, so changing any of them after signing fails the signature check.
+`connectorId` must be `ext-` followed by the release's `capability`, for example `ext-payments:refund`. This is the identity parmana-core signs for an external release. The other fields (`authorizationId`, `policy`, `approvedBy`, `issuedAt`, `conditions`) are not checked by this service. They are covered by the signature, so changing any of them after signing fails the signature check.
 
 ## Checks
 
@@ -86,14 +86,14 @@ A repeat that arrives while the first run is still in progress, or after the fir
 ```json
 {
   "businessTransactionId": "txn-...",
-  "capability": "razorpay:refund",
+  "capability": "payments:refund",
   "success": true,
   "result": { "status": 200, "body": { } },
   "executedAt": "2026-10-29T15:00:01.000Z"
 }
 ```
 
-`result.body` is whatever the connector returns. For `razorpay:refund` see [the Razorpay README](../src/connectors/razorpay/README.md).
+`result.body` is whatever the connector returns. For `payments:refund` see [the Razorpay README](../src/connectors/razorpay/README.md).
 
 `executedAt` is the time the answer was built, after the connector returned.
 
@@ -102,7 +102,7 @@ A repeat that arrives while the first run is still in progress, or after the fir
 ```json
 {
   "businessTransactionId": "txn-...",
-  "capability": "razorpay:refund",
+  "capability": "payments:refund",
   "success": false,
   "result": { "error": "connector failed: upstream_error" },
   "executedAt": "2026-10-29T15:00:01.000Z"
