@@ -73,6 +73,7 @@ It runs the code that performs approved actions in business systems. Each vendor
 | [docs/MANIFEST.md](docs/MANIFEST.md) | The manifest format and engine (tested, not used by a connector yet) |
 | [SETUP.md](SETUP.md) | The Vercel project and every environment variable |
 | [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md) | Deploying, verifying, shipping a change, troubleshooting, and recovering a release that was recorded but not confirmed |
+| [docs/ADDING-A-CONNECTOR.md](docs/ADDING-A-CONNECTOR.md) | How to add a connector or a signal source, from naming to deployment |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Branches, sign-off, checks, CI and how to add a connector |
 | [SECURITY.md](SECURITY.md) | How to report a vulnerability |
 
@@ -144,6 +145,7 @@ The Vercel adapter strips the `/api` prefix and passes the request to the same h
 | `src/manifest.ts`, `schema/manifest.schema.json` | Manifest loading and validation. Tested, not used by a connector yet | `ajv`, `yaml` |
 | `src/connectors/<vendor>/` | One folder per vendor: its code, its README, and any check script. Its unit test is in `tests/connectors/<vendor>/`, because the boundary test does not allow a vendor folder to import vitest | Node built-ins, its own folder, and the contract only |
 | `src/service/` | The service: configuration, release verification, replay store, HTTP server, logging, and the registry of connectors | The contract, the connector registry, and `@parmana/crypto` |
+| `src/signal/` | The Razorpay payment signal service: answers signed read-only queries from parmana-core. Its own code, one source; a second signal needs a dispatch by claim, which does not exist yet (see [docs/ADDING-A-CONNECTOR.md](docs/ADDING-A-CONNECTOR.md)) | The contract, `@parmana/crypto` |
 | `src/main.ts` | The entry point for the local service | The service |
 | `api/execute.ts`, `api/health.ts` | The Vercel functions | The service |
 | `public/index.html` | The placeholder page at the site root | Nothing |
@@ -175,14 +177,7 @@ These rules keep connectors separate from each other and from the manifest engin
 
 ## Adding a connector
 
-1. Create `src/connectors/<vendor>/` and write the connector against `src/connector-contract.ts`. Implement `execute(request, context)`, and throw a `ConnectorError` for every refusal, with a message that never contains the credential.
-2. Make the connector act once. If the business system can repeat an action, check for an existing result before acting, keyed by the `businessTransactionId`. The Razorpay connector does this with the refund receipt.
-3. Refuse anything outside what the capability allows before any call is made: wrong target, wrong amount, wrong credential format.
-4. Add its credential to `src/service/registry.ts`: the environment variable, the check, the factory, and a case in each switch. The service cannot select a connector without them.
-5. Add the connector's variable to `.env.example`, to the table in this README, and to [SETUP.md](SETUP.md). Add it to the Vercel environment as described in [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md).
-6. Add tests under `tests/connectors/<vendor>/` against a fake of the vendor's API, covering the refusals, the repeat case, and an error from the vendor that does not leak the credential.
-7. Document the connector in `src/connectors/<vendor>/README.md`, the way [the Razorpay README](src/connectors/razorpay/README.md) does.
-8. Run `npm test`. The boundary test must pass.
+Read [docs/ADDING-A-CONNECTOR.md](docs/ADDING-A-CONNECTOR.md). It covers the two kinds of component (an action connector, and a read-only signal source), the naming rules, the registry, the settings, the tests, the parmana-core steps, deployment, and the checklist before merge.
 
 ## Razorpay connector
 
