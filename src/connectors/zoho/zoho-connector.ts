@@ -25,8 +25,8 @@ import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest, 
 export const ZOHO_INVOICE_FETCH_CAPABILITY = "zoho:invoice-fetch";
 export const ZOHO_INVOICE_CREATE_CAPABILITY = "zoho:invoice-create";
 
-/** The US data centre. Other Zoho data centres need their own base URL, which this connector does not yet support. */
-const API = "https://www.zohoapis.com/books/v3";
+/** The India data centre (the organization's data centre). Other data centres need a code change to this base URL. */
+const API = "https://www.zohoapis.in/books/v3";
 const DEFAULT_BUDGET_MS = 10_000;
 const FETCH_PARAMETERS: ReadonlySet<string> = new Set(["invoiceId"]);
 const CREATE_PARAMETERS: ReadonlySet<string> = new Set(["customerId", "lineItems"]);

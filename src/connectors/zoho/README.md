@@ -34,7 +34,7 @@ Agent ──request──► Parmana core (policy, approval, signed decision)
                    parmana-connectors (this connector)
                         │ OAuth access token (Zoho-oauthtoken header, never stored)
                         ▼
-                   Zoho Books API (https://www.zohoapis.com/books/v3) ──► invoice
+                   Zoho Books API (https://www.zohoapis.in/books/v3) ──► invoice
 ```
 
 - **Code:** `zoho-connector.ts` in this folder. It imports only Node built-ins and the shared contract.
@@ -93,9 +93,18 @@ Hosted: set the variables above in the host's environment and deploy. Environmen
 5. Verify the trust records with `parmana-verifier`.
 6. Delete the test invoice in Zoho Books.
 
-## Policies
+## Policies and integration with parmana-core
 
-No policy for these capabilities ships in this repository. Write one in `parmana-core` before any release. It should bind the approved `customerId` and line items to the parameters sent, so the values that were approved are the values created.
+No policy for these capabilities ships in this repository. As of 19 November 2026, parmana-core has no policy and no registration for `zoho:invoice-fetch` or `zoho:invoice-create`. Neither capability can be used through parmana-core until both exist. Writing the policy is a parmana-core change. It should bind the approved `customerId` and line items to the parameters sent, so the values that were approved are the values created.
+
+How a release reaches this connector, as [docs/API.md](../../../docs/API.md) describes for every connector:
+
+- `connectorId` must be `ext-` followed by the capability: `ext-zoho:invoice-fetch` or `ext-zoho:invoice-create`.
+- `audience` must be the endpoint URL registered for this service, exactly as set in `PARMANA_RELEASE_AUDIENCE`.
+- `capability` must be one of the two capabilities above. The service refuses any other.
+- `target` is the invoice id for a fetch. A create has no target check (see the open item F28-4 below).
+
+The registration steps in parmana-core, and the Zoho endpoint's registered URL, are not yet recorded in either repository.
 
 ## Security model
 
@@ -108,17 +117,18 @@ No policy for these capabilities ships in this repository. Write one in `parmana
 ## Known limits
 
 - **Not yet verified live:** the request shapes have not been checked against a live Zoho Books organization. Treat the first production run as a test.
-- **US data centre only:** the base URL is `https://www.zohoapis.com/books/v3`. Organizations in other Zoho data centres need a code change to the base URL.
-- **No duplicate check:** the connector does not search for an existing invoice before a create. Duplicate prevention relies on the `reference_number` and the operator's check.
+- **India data centre only:** the base URL is `https://www.zohoapis.in/books/v3`, for an organization in Zoho's India data centre. Organizations in other Zoho data centres need a code change to the base URL.
+- **No duplicate check:** the connector does not search for an existing invoice before a create. Duplicate prevention relies on the `reference_number` and the operator's check. Governance finding F26-6 records this as an open design note.
+- **Create does not check the release target (F28-4, open):** `zoho:invoice-create` never reads the release `target`. A signed release whose target names one object can create an invoice for the customer in its parameters. The signature covers both fields, so this is a binding gap, not a forgery. It is open, with no fix branch.
 - **Direct access:** a Zoho call made outside Parmana is not checked or recorded.
 - **Token exposure:** on a shared host, code that can read the server's environment can read the token. Run the connector on a host you control.
 
 ## Not done or not verified
 
-- **Live Zoho Books:** the request shapes have not been checked against a live Zoho Books organization. The first production run is a test.
-- **Zoho policy:** no Zoho policy is in `parmana-core` yet. One must be written before any release.
-- **Duplicate check:** there is no duplicate check before create. The `reference_number` check is the only protection against a second invoice, and it relies on the operator.
-- **Commit trailer:** the commit that added this connector names Claude without a model number, because the repo's instructions don't allow model identifiers in commits.
+- **Live Zoho Books:** the request shapes have not been checked against a live Zoho Books organization. The first production run is a test. No test organization has been confirmed for this connector yet.
+- **Zoho policy and registration:** neither exists in `parmana-core`. Both must exist before any release.
+- **Target binding (F28-4, open):** `zoho:invoice-create` does not check the release target. Fix: decide what the target must equal for a create, then check it before the call. Not yet decided.
+- **Duplicate check (F26-6, open):** there is no duplicate check before create. The `reference_number` check and the release ledger are the only protection against a second invoice, and the first relies on the operator.
 
 ## Operations
 

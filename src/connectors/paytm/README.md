@@ -111,6 +111,9 @@ No Paytm refund policy is listed in `parmana-core/policies/` at the commit I che
 - **Pending refunds:** a refund Paytm reports as `PENDING` is refused, not retried. A person must check Paytm and decide.
 - **Ambiguous outcomes:** if a refund may have reached Paytm but no answer was read, the error tells the operator to check Paytm for that reference before any other action.
 - **Policy not identified:** see Policies above.
+- **Retry on an unconfirmed status (F26-5, open):** the governance review records that the connector retries a refund whose status is `UNKNOWN` with the same `refId`. That is safe only if Paytm rejects a reused `refId`, and this is not confirmed. Until it is, an `UNKNOWN` status needs a manual check of Paytm before any retry.
+- **Endpoint paths not confirmed (F26-8, open):** the paths `/v2/refund/status` and `/refund/apply` have not been checked against Paytm's documentation. This is blocked on access to that documentation.
+- **Target not checked (F28-4, open):** `paytm:refund` never reads the release `target`. The refund uses the signed `orderId` and `transactionId` parameters, so a release whose target names a different payment can refund the one in its parameters. The signature covers both, so this is a binding gap, not a forgery. It is open, with no fix branch.
 
 ## Operations
 
