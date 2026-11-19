@@ -34,7 +34,7 @@ Agent ──request──► Parmana core (policy, approval, signed decision)
                    parmana-connectors (this connector)
                         │ OAuth access token (Zoho-oauthtoken header, never stored)
                         ▼
-                   Zoho Books API (https://www.zohoapis.com/books/v3) ──► invoice
+                   Zoho Books API (https://www.zohoapis.in/books/v3) ──► invoice
 ```
 
 - **Code:** `zoho-connector.ts` in this folder. It imports only Node built-ins and the shared contract.
@@ -108,7 +108,7 @@ No policy for these capabilities ships in this repository. Write one in `parmana
 ## Known limits
 
 - **Not yet verified live:** the request shapes have not been checked against a live Zoho Books organization. Treat the first production run as a test.
-- **US data centre only:** the base URL is `https://www.zohoapis.com/books/v3`. Organizations in other Zoho data centres need a code change to the base URL.
+- **India data centre only:** the base URL is `https://www.zohoapis.in/books/v3`, for an organization in Zoho's India data centre. Organizations in other Zoho data centres need a code change to the base URL.
 - **No duplicate check:** the connector does not search for an existing invoice before a create. Duplicate prevention relies on the `reference_number` and the operator's check.
 - **Direct access:** a Zoho call made outside Parmana is not checked or recorded.
 - **Token exposure:** on a shared host, code that can read the server's environment can read the token. Run the connector on a host you control.
