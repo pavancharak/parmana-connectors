@@ -13,7 +13,7 @@ This is the contract between parmana-core and a connector endpoint. It covers th
 
 On Vercel the `/api` prefix is removed before the request is handled, so the same rules apply to both. Any other route or method returns `404` with `{"error":"not found"}` from the service.
 
-`GET /health` (and `/api/health` on Vercel) returns `200` with `{"status":"UP"}`. It does not check the database or the business system.
+`GET /health` (and `/api/health` on Vercel) returns `200` with `{"status":"UP"}`. It does not check the database or the institutional system.
 
 ## The release
 
@@ -109,7 +109,7 @@ A repeat that arrives while the first run is still in progress, or after the fir
 }
 ```
 
-Only the error code leaves the service. For a failure that is not a connector error, the text is `connector failed`. The connector's own message is written to the log, not returned (see [Logs](#logs)). The release stays recorded, so it cannot be sent again. Check the business system before doing anything else. [RUNBOOK.md](../src/connectors/razorpay/RUNBOOK.md) describes how.
+Only the error code leaves the service. For a failure that is not a connector error, the text is `connector failed`. The connector's own message is written to the log, not returned (see [Logs](#logs)). The release stays recorded, so it cannot be sent again. Check the institutional system before doing anything else. [RUNBOOK.md](../src/connectors/razorpay/RUNBOOK.md) describes how.
 
 If the connector's answer is larger than 16 KB, the service returns `200` with `success: false` and `result` set to `{"error":"result is larger than 16 KB"}`.
 

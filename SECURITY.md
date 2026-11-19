@@ -1,6 +1,6 @@
 # Security policy
 
-This repository runs the code that acts in business systems on Parmana's behalf. A weakness here can move money or change records, so report it privately.
+This repository runs the code that acts in institutional systems on Parmana's behalf. A weakness here can move money or change records, so report it privately.
 
 ## Reporting a vulnerability
 
@@ -15,7 +15,7 @@ Do not put a live credential, a key pair, a database connection string or a cust
 In scope, for this repository:
 
 - Verification of signed releases, the replay store and the answers the service gives (`src/service/`, `api/`).
-- The connectors, including the refusals they make before any call to a business system (`src/connectors/`).
+- The connectors, including the refusals they make before any call to an institutional system (`src/connectors/`).
 - Configuration checks, including the rule that live keys are refused unless allowed.
 - Anything that could make a credential appear in a log, an answer or an error.
 

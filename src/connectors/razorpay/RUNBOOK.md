@@ -350,7 +350,7 @@ The service records a release before it runs the connector. A release that has b
    Look for `"receipt":"<businessTransactionId>"`. Each page holds 100 refunds, so change `skip` to `100`, `200` and so on until a page comes back short. The connector reads at most 1,000 refunds; a payment with more needs the Dashboard.
 
 4. **Decide, and record the decision.**
-   - **A refund with that receipt exists.** The refund was made. Record it in the business record. Do not resend. The refusal is correct.
+   - **A refund with that receipt exists.** The refund was made. Record it in the institutional record. Do not resend. The refusal is correct.
    - **No refund with that receipt exists.** No refund was made, as far as Razorpay shows. Tell the owner before anything else. Then raise a new action in parmana-core under a new `businessTransactionId`, following its approval process. Production needs two people (maker and checker).
    - **Razorpay cannot be reached, or the answer is unclear.** Wait, and check again. Do not act on a guess.
 
