@@ -9,8 +9,8 @@ import type { SignalQueryMessage } from "../../src/signal/protocol.js";
 /**
  * Cases ported from parmana-core's payment source tests (`razorpay-payment-source.test.ts`), which
  * were removed from core when the source was confirmed to be a duplicate of this signal. Behaviour
- * here is this signal's own. Where it differs from the core copy (a wrong claim, or a missing amount,
- * is answered `not_found` here, not thrown), the test asserts this signal's behaviour.
+ * here matches the core copy: a wrong claim or a missing amount throws (a configuration or query error),
+ * and a payment Razorpay does not have is `not_found`.
  */
 
 const CREDENTIAL = "rzp_test_keyid:keysecret";
@@ -137,25 +137,27 @@ describe("payment.refundable from Razorpay's own record", () => {
     ).rejects.toThrow(SignalUnavailableError);
   });
 
-  it("answers not_found for a claim it does not establish", async () => {
+  it("throws for a claim it does not establish, as a configuration error, without calling Razorpay", async () => {
     const { fetch, spy } = payment(captured);
-    const answer = await answerPaymentRefundable(
-      query({ claim: "order.shipped", signalKey: "order.shipped" }),
-      { credential: CREDENTIAL, fetch, now: () => NOW },
-    );
-    expect(answer).toMatchObject({ status: "not_found" });
+    await expect(
+      answerPaymentRefundable(
+        query({ claim: "order.shipped", signalKey: "order.shipped" }),
+        { credential: CREDENTIAL, fetch, now: () => NOW },
+      ),
+    ).rejects.toThrow(SignalUnavailableError);
     expect(spy).not.toHaveBeenCalled();
   });
 
-  it("answers not_found when the refund amount is missing or not a positive whole number of paise", async () => {
+  it("throws when the refund amount is missing or not a positive whole number of paise, without calling Razorpay", async () => {
     const { fetch, spy } = payment(captured);
     for (const parameters of [{}, { amount: 0 }, { amount: 1.5 }, { amount: -5 }]) {
-      const answer = await answerPaymentRefundable(query({ parameters }), {
-        credential: CREDENTIAL,
-        fetch,
-        now: () => NOW,
-      });
-      expect(answer).toMatchObject({ status: "not_found" });
+      await expect(
+        answerPaymentRefundable(query({ parameters }), {
+          credential: CREDENTIAL,
+          fetch,
+          now: () => NOW,
+        }),
+      ).rejects.toThrow(SignalUnavailableError);
     }
     expect(spy).not.toHaveBeenCalled();
   });
