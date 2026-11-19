@@ -180,12 +180,13 @@ describe("Razorpay signal service", () => {
     });
   });
 
-  it("reports not_found when the query carries no refund amount, so the policy cannot pass", async () => {
+  it("answers 503 when the query carries no refund amount, and signs no answer, so the policy cannot pass", async () => {
     const base = await start(fakeRazorpay(captured));
-    const envelope = (await (
-      await post(base, signed(query({ parameters: undefined })))
-    ).json()) as SignedSignalAnswer;
-    expect(envelope.answer).toMatchObject({ status: "not_found" });
+    const response = await post(base, signed(query({ parameters: undefined })));
+    expect(response.status).toBe(503);
+    const body = (await response.json()) as Record<string, unknown>;
+    expect(body).not.toHaveProperty("answer");
+    expect(String(body.error)).toContain("positive whole refund amount");
   });
 
   it("answers 503 when Razorpay fails, and never answers a fact it could not read", async () => {
