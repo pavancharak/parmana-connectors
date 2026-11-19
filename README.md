@@ -38,7 +38,7 @@ It runs the code that performs approved actions in business systems. Each vendor
 
 ## Current work
 
-- **Migration from parmana-core (ADR-0018).** Accepted 2 November 2026. Every connector is now on `main` here. Core has removed Zerodha and Slack. Paytm's removal is in progress in core. GitHub and HubSpot are still in core. The steps for changing this repository are in [docs/WORKFLOW.md](docs/WORKFLOW.md).
+- **Migration from parmana-core (ADR-0018).** Accepted 2 November 2026. Every connector is now on `main` here. Core has removed Zerodha, Slack, Paytm, GitHub and HubSpot. Its source and API routes contain no connector code for these five (checked on 19 November 2026 against `origin/main` of parmana-core). The steps for changing this repository are in [docs/WORKFLOW.md](docs/WORKFLOW.md).
 - **Zoho Books.** Built against the India data centre (`https://www.zohoapis.in/books/v3`). Next: a test run against a Zoho Books test organization, a policy and registration in parmana-core (neither exists yet), and the open items F28-4 and F26-6 in [the Zoho README](src/connectors/zoho/README.md#not-done-or-not-verified).
 - **Razorpay.** The signed-release test through the preview is the next thing to run. Then the production registration in parmana-core, with the operator as maker and Mamta as checker.
 - **Signing.** `main` requires signed commits. Each PR needs the operator's signature before merge. The commands are in [docs/WORKFLOW.md](docs/WORKFLOW.md), section 3.
