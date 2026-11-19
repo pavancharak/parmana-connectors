@@ -1,12 +1,14 @@
 # parmana-connectors
 
-Vendor connectors for [Parmana](https://github.com/pavancharak/parmana-core), and the service that runs them. Each connector runs outside parmana-core. The service receives a signed release from Parmana, verifies it, performs the action in the business system with the connector's own credentials, and returns the result.
+Part of Parmana, the Institutional Authority Layer for Autonomous Systems. Parmana decides whether an action is within the authority an institution has delegated. This repository performs the actions Parmana has approved.
+
+Vendor connectors for [Parmana](https://github.com/pavancharak/parmana-core), and the service that runs them. Each connector runs outside parmana-core. The service receives a signed release from Parmana, verifies it, performs the action in the institutional system with the connector's own credentials, and returns the result.
 
 Parmana core decides whether an action may run and records the decision. This repository holds the code that performs the action. It never decides policy, and it never acts on a request that Parmana has not approved.
 
 ## Why this repository exists
 
-Parmana core decides whether an action is approved, and records that decision. Core does not act in business systems, and it should not hold their credentials. This repository holds the vendor code that performs approved actions, kept apart from core so that:
+Parmana core decides whether an action is approved, and records that decision. Core does not act in institutional systems, and it should not hold their credentials. This repository holds the vendor code that performs approved actions, kept apart from core so that:
 
 - core carries no vendor credentials or vendor client code;
 - a connector can be changed, deployed or replaced without a core release;
@@ -24,7 +26,7 @@ This service never decides whether an action is allowed. It refuses any release 
 
 ## What it does
 
-It runs the code that performs approved actions in business systems. Each vendor connector is a separate module under `src/connectors/<vendor>/`, with its own README and tests. The service runs one connector per process, chosen by `PARMANA_CONNECTOR`.
+It runs the code that performs approved actions in institutional systems. Each vendor connector is a separate module under `src/connectors/<vendor>/`, with its own README and tests. The service runs one connector per process, chosen by `PARMANA_CONNECTOR`.
 
 | Connector | Capability | Mode |
 | --- | --- | --- |
@@ -47,7 +49,7 @@ It runs the code that performs approved actions in business systems. Each vendor
 
 - Finish the registrations and removals for Paytm, GitHub and HubSpot from core, one at a time.
 - Decide the open items before any connector goes live: Slack and GitHub can repeat an action, and no connector has been run against a live system.
-- Wire Zerodha's live mode only after a separate approval and a SEBI and Zerodha sign-off, and only if the business wants it.
+- Wire Zerodha's live mode only after a separate approval and a SEBI and Zerodha sign-off, and only if the institution wants it.
 - Turn on the production registrations, and only then any live traffic.
 
 ## Status
@@ -117,9 +119,9 @@ For `POST /execute`, a release must pass every check before the connector runs: 
 
 A release that passes runs the connector once. A refused release returns `403` with every reason found, and nothing runs. The full list of checks, answers, status codes and limits is in [docs/API.md](docs/API.md).
 
-**Known limit.** A release is recorded before the connector runs. If the process stops after the record and before the connector finishes, that release is refused on every later attempt, and the operator must check the business system by hand. This is the price of acting at most once. [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md) has the steps.
+**Known limit.** A release is recorded before the connector runs. If the process stops after the record and before the connector finishes, that release is refused on every later attempt, and the operator must check the institutional system by hand. This is the price of acting at most once. [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md) has the steps.
 
-`GET /health` returns `{"status":"UP"}`. It shows that the process is running. It does not check the database or the business system.
+`GET /health` returns `{"status":"UP"}`. It shows that the process is running. It does not check the database or the institutional system.
 
 ## Logs
 

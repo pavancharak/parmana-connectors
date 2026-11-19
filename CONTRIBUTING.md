@@ -1,6 +1,6 @@
 # Contributing to parmana-connectors
 
-Thank you for looking. This repository runs the code that performs actions in business systems for Parmana. Changes are reviewed with that in mind. Read the [README](README.md) for what the service does and the rules for connectors before you change anything.
+Thank you for looking. This repository runs the code that performs actions in institutional systems for Parmana. Changes are reviewed with that in mind. Read the [README](README.md) for what the service does and the rules for connectors before you change anything.
 
 ## Before you start
 
@@ -54,7 +54,7 @@ This repository has no pull request template.
 
 ## Adding a connector
 
-Follow [README: Adding a connector](README.md#adding-a-connector). A new connector is a security change. It moves money or changes data in a business system, so it needs the owner's review and tests against a fake of the vendor's API. Document it in `src/connectors/<vendor>/README.md`, as [the Razorpay README](src/connectors/razorpay/README.md) does.
+Follow [README: Adding a connector](README.md#adding-a-connector). A new connector is a security change. It moves money or changes data in an institutional system, so it needs the owner's review and tests against a fake of the vendor's API. Document it in `src/connectors/<vendor>/README.md`, as [the Razorpay README](src/connectors/razorpay/README.md) does.
 
 ## Deployment
 
