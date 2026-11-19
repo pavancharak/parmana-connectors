@@ -9,7 +9,7 @@ Status as of 2026-11-08. This document replaces the earlier statement that the R
 | Repository           | Role                                                                                                                                                          | Razorpay                                                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `parmana-core`       | Decides whether an action may run. Holds policies, approvals, governance, the SDKs, and signed records. It never holds a business system's credential.        | The refund connector was removed on 2026-08-12. The read-only payment signal source and draft policies are on `feat/razorpay-payment-signal` (PR #512). |
-| `parmana-connectors` | Runs the code that performs approved actions in business systems, outside core (ADR-0018). Each deployment runs one connector, chosen by `PARMANA_CONNECTOR`. | The `razorpay:refund` connector lives in `src/connectors/razorpay/`.                                                                                    |
+| `parmana-connectors` | Runs the code that performs approved actions in business systems, outside core (ADR-0018). Each deployment runs one connector, chosen by `PARMANA_CONNECTOR`. | The `payments:refund` connector lives in `src/connectors/razorpay/`.                                                                                    |
 | `parmana-docs`       | The public documentation site.                                                                                                                                | Not checked for this document.                                                                                                                          |
 | `parmana-site`       | The marketing website.                                                                                                                                        | None.                                                                                                                                                   |
 | `pavancharak`        | A profile repository with a README and docs.                                                                                                                  | None.                                                                                                                                                   |
@@ -52,13 +52,13 @@ The other connectors' settings (`PAYTM_MERCHANT_CREDENTIAL`, `GITHUB_APP_CREDENT
 
 ## 3. The Razorpay connector, in detail
 
-The connector is in [`src/connectors/razorpay/razorpay-connector.ts`](https://github.com/pavancharak/parmana-connectors/blob/main/src/connectors/razorpay/razorpay-connector.ts). Its tests are in [`tests/connectors/razorpay/razorpay-connector.test.ts`](https://github.com/pavancharak/parmana-connectors/blob/main/tests/connectors/razorpay/razorpay-connector.test.ts). It runs one capability: `razorpay:refund`.
+The connector is in [`src/connectors/razorpay/razorpay-connector.ts`](https://github.com/pavancharak/parmana-connectors/blob/main/src/connectors/razorpay/razorpay-connector.ts). Its tests are in [`tests/connectors/razorpay/razorpay-connector.test.ts`](https://github.com/pavancharak/parmana-connectors/blob/main/tests/connectors/razorpay/razorpay-connector.test.ts). It runs one capability: `payments:refund`.
 
 ### 3.1 What a release must contain
 
 | Field                   | Value                                                      | How the connector checks it                                             |
 | ----------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `capability`            | `razorpay:refund`                                          | Any other value is refused as `unknown_capability`                      |
+| `capability`            | `payments:refund`                                          | Any other value is refused as `unknown_capability`                      |
 | `target`                | A payment id: `pay_` followed by 6 to 40 letters or digits | Anything else is refused as `invalid_input`                             |
 | `parameters.amount`     | A positive whole number of paise. `100` is ₹1              | Zero, negative, fractional, or non-number is refused as `invalid_input` |
 | `businessTransactionId` | Parmana's transaction id. It becomes the refund's receipt  | Empty is refused as `invalid_input`                                     |
@@ -116,7 +116,7 @@ The connector throws a `ConnectorError`. The service returns only its code, as `
 | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | `invalid_input`                     | The target, amount, or `businessTransactionId` is wrong. No call was made                                                  | The release as sent by `parmana-core` |
 | `credential_invalid`                | The key pair is malformed, or a live key is used without `PARMANA_ALLOW_LIVE_KEYS=true`. No call was made                  | The host's setting                    |
-| `unknown_capability`                | The capability is not `razorpay:refund`                                                                                    | The release's capability              |
+| `unknown_capability`                | The capability is not `payments:refund`                                                                                    | The release's capability              |
 | `upstream_error` (Razorpay refused) | Razorpay returned an error for the list or the refund. Its code and description are in the message, which the service logs | Razorpay's dashboard                  |
 | `upstream_error` (not reached)      | The network call failed. The message says whether a refund may exist                                                       | The recovery steps in section 4       |
 | `timeout`                           | A call ran out of the time limit                                                                                           | As above                              |

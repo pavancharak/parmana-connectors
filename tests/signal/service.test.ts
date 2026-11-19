@@ -42,7 +42,7 @@ function query(
     signalKey: "payment.refundable",
     claim: "payment.refundable",
     subject: PAYMENT,
-    action: "razorpay:refund",
+    action: "payments:refund",
     businessTransactionId: "bt-7",
     nonce: "nonce-1",
     issuedAt: NOW.toISOString(),

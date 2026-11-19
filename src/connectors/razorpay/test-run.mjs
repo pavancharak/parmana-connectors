@@ -42,7 +42,7 @@ async function refuse(name, request, code) {
 let first;
 try {
   first = await connector.execute(
-    { capability: "razorpay:refund", parameters: { amount }, target: paymentId, businessTransactionId: transaction },
+    { capability: "payments:refund", parameters: { amount }, target: paymentId, businessTransactionId: transaction },
     context,
   );
   check("refund is created once", first.success === true && first.metadata.body.alreadyRefunded === false, `refund ${first.metadata.body.refundId}, status ${first.metadata.body.status}`);
@@ -54,7 +54,7 @@ try {
 if (first) {
   try {
     const again = await connector.execute(
-      { capability: "razorpay:refund", parameters: { amount }, target: paymentId, businessTransactionId: transaction },
+      { capability: "payments:refund", parameters: { amount }, target: paymentId, businessTransactionId: transaction },
       context,
     );
     check(
@@ -68,8 +68,8 @@ if (first) {
 }
 
 // 3. Refusals happen before any call to Razorpay.
-await refuse("a target that is not a payment id is refused", { capability: "razorpay:refund", parameters: { amount }, target: "order_123", businessTransactionId: randomUUID() }, "invalid_input");
-await refuse("a zero amount is refused", { capability: "razorpay:refund", parameters: { amount: 0 }, target: paymentId, businessTransactionId: randomUUID() }, "invalid_input");
+await refuse("a target that is not a payment id is refused", { capability: "payments:refund", parameters: { amount }, target: "order_123", businessTransactionId: randomUUID() }, "invalid_input");
+await refuse("a zero amount is refused", { capability: "payments:refund", parameters: { amount: 0 }, target: paymentId, businessTransactionId: randomUUID() }, "invalid_input");
 
 const passed = results.filter(Boolean).length;
 console.log(`\n${passed} of ${results.length} checks passed.`);

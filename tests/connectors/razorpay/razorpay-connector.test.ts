@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest } from "../../../src/connector-contract.js";
-import { RAZORPAY_REFUND_CAPABILITY, createRazorpayConnector } from "../../../src/connectors/razorpay/razorpay-connector.js";
+import { PAYMENTS_REFUND_CAPABILITY, createRazorpayConnector } from "../../../src/connectors/razorpay/razorpay-connector.js";
 
 const PAYMENT = "pay_TestPayment01";
 const TRANSACTION = "txn-razorpay-1";
@@ -65,7 +65,7 @@ function fakeRazorpay(
 
 function request(overrides: Partial<ConnectorRequest> = {}): ConnectorRequest {
   return {
-    capability: RAZORPAY_REFUND_CAPABILITY,
+    capability: PAYMENTS_REFUND_CAPABILITY,
     parameters: { amount: 100 },
     target: PAYMENT,
     businessTransactionId: TRANSACTION,
@@ -81,7 +81,7 @@ describe("createRazorpayConnector", () => {
   it("describes one capability for the system razorpay", () => {
     const connector = createRazorpayConnector({ fetch: fakeRazorpay().fetch });
     expect(connector.system).toBe("razorpay");
-    expect(connector.capabilities).toEqual([RAZORPAY_REFUND_CAPABILITY]);
+    expect(connector.capabilities).toEqual([PAYMENTS_REFUND_CAPABILITY]);
   });
 
   it("refunds once, with the transaction id as the receipt and basic auth", async () => {

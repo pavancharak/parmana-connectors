@@ -1,4 +1,4 @@
-import { RAZORPAY_REFUND_CAPABILITY } from "../connectors/razorpay/razorpay-connector.js";
+import { PAYMENTS_REFUND_CAPABILITY } from "../connectors/razorpay/razorpay-connector.js";
 import { RAZORPAY_REFUNDABLE_SIGNAL_KEY } from "./evaluators/razorpay-refundable-evaluator.js";
 
 /**
@@ -7,7 +7,7 @@ import { RAZORPAY_REFUNDABLE_SIGNAL_KEY } from "./evaluators/razorpay-refundable
  * This does not depend on who issued the authorization: the endpoint enforces it itself.
  */
 const REQUIRED_CONDITIONS: Readonly<Record<string, readonly string[]>> = {
-  [RAZORPAY_REFUND_CAPABILITY]: [RAZORPAY_REFUNDABLE_SIGNAL_KEY],
+  [PAYMENTS_REFUND_CAPABILITY]: [RAZORPAY_REFUNDABLE_SIGNAL_KEY],
 };
 
 /** The required signal keys for `capability` that `conditions` does not carry. */

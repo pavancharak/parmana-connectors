@@ -5,7 +5,7 @@ import { CanonicalSerializer } from "@parmana/crypto";
 import type { ExternalRelease, SignedExternalRelease } from "../../src/service/release.js";
 
 export const AUDIENCE = "https://connector.example.com/execute";
-export const CAPABILITY = "razorpay:refund";
+export const CAPABILITY = "payments:refund";
 export const TRANSACTION = "txn-service-1";
 
 export const keys = generateKeyPairSync("ed25519");
@@ -14,7 +14,7 @@ export function release(overrides: Partial<ExternalRelease> = {}): ExternalRelea
   const issuedAtMs = Date.now();
   return {
     version: 1,
-    connectorId: "ext-razorpay:refund",
+    connectorId: "ext-payments:refund",
     audience: AUDIENCE,
     businessTransactionId: TRANSACTION,
     authorizationId: "auth-1",

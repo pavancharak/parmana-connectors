@@ -24,7 +24,7 @@ function query(over: Partial<SignalQueryMessage> = {}): SignalQueryMessage {
     signalKey: "payment.refundable",
     claim: "payment.refundable",
     subject: "pay_ABC123456",
-    action: "razorpay:refund",
+    action: "payments:refund",
     businessTransactionId: "btx-1",
     nonce: "nonce-1",
     issuedAt: NOW.toISOString(),

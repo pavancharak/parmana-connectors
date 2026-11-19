@@ -41,7 +41,7 @@ describe("checkExternalRelease", () => {
     const result = await check(signed(release({ conditions: [] } as Partial<ReturnType<typeof release>>)));
     expect(result.valid).toBe(false);
     expect(result.valid === false && result.errors).toEqual([
-      'a razorpay:refund release must carry the business condition "payment.refundable"; this service refuses it without one',
+      'a payments:refund release must carry the business condition "payment.refundable"; this service refuses it without one',
     ]);
   });
 
@@ -67,13 +67,13 @@ describe("checkExternalRelease", () => {
   it("refuses a release signed for another connector, even when its capability is served here", async () => {
     const result = await check(signed(release({ connectorId: "ext-paytm:refund" })));
     expect(result.valid).toBe(false);
-    expect(result.valid === false && result.errors).toEqual(['release.connectorId "ext-paytm:refund" is not "ext-razorpay:refund"']);
+    expect(result.valid === false && result.errors).toEqual(['release.connectorId "ext-paytm:refund" is not "ext-payments:refund"']);
   });
 
   it("refuses the bare vendor name, which is not the identity parmana-core signs", async () => {
     const result = await check(signed(release({ connectorId: "razorpay" })));
     expect(result.valid).toBe(false);
-    expect(result.valid === false && result.errors).toEqual(['release.connectorId "razorpay" is not "ext-razorpay:refund"']);
+    expect(result.valid === false && result.errors).toEqual(['release.connectorId "razorpay" is not "ext-payments:refund"']);
   });
 
   it("refuses a release whose content changed after signing", async () => {

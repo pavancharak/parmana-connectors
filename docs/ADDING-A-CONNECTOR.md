@@ -10,7 +10,7 @@ There are two kinds of component. Pick one before you start.
 
 | Kind | What it does | Where it lives | Example |
 | --- | --- | --- | --- |
-| **Action connector** | Performs an approved action in a business system (refund, create invoice, post a message). Runs only on a signed release from parmana-core. | `src/connectors/<vendor>/`, registered in `src/service/registry.ts` | `razorpay:refund`, `zoho:invoice-create` |
+| **Action connector** | Performs an approved action in a business system (refund, create invoice, post a message). Runs only on a signed release from parmana-core. | `src/connectors/<vendor>/`, registered in `src/service/registry.ts` | `payments:refund`, `zoho:invoice-create` |
 | **Signal source** | Answers a read-only question that a policy needs (for example, is this payment refundable?). Answers signed queries from parmana-core. | `src/signal/`, plus the policy that uses it in parmana-core | `payment.refundable` |
 
 Most new vendors need an action connector. A signal source is needed only when a policy must check a fact in that vendor's system.

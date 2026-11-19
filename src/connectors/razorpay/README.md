@@ -1,6 +1,6 @@
 # Razorpay connector
 
-`src/connectors/razorpay/razorpay-connector.ts` runs one capability, `razorpay:refund`. It refunds a payment once, even when the same release is sent twice. The code is in that file, and its tests are in `tests/connectors/razorpay/razorpay-connector.test.ts`.
+`src/connectors/razorpay/razorpay-connector.ts` runs one capability, `payments:refund`. It refunds a payment once, even when the same release is sent twice. The code is in that file, and its tests are in `tests/connectors/razorpay/razorpay-connector.test.ts`.
 
 ## Request
 
@@ -8,7 +8,7 @@ The release must carry:
 
 | Field | Value | Checked by the connector |
 | --- | --- | --- |
-| `capability` | `razorpay:refund` | Yes. Any other capability is refused as `unknown_capability` |
+| `capability` | `payments:refund` | Yes. Any other capability is refused as `unknown_capability` |
 | `target` | A payment id, `pay_` followed by 6 to 40 letters or digits | Yes. Anything else is refused as `invalid_input` |
 | `parameters.amount` | A positive whole number of paise (`100` is ₹1) | Yes. Zero, negative, fractional or non-number is refused as `invalid_input` |
 | `businessTransactionId` | Parmana's transaction id. It is sent to Razorpay as the refund receipt | Yes. Empty is refused as `invalid_input` |
@@ -68,7 +68,7 @@ The connector throws a `ConnectorError`. The service returns only its code, as `
 | --- | --- | --- |
 | `invalid_input` | A refusal of the request: target, amount or missing `businessTransactionId`. No call was made | The release as sent by parmana-core |
 | `credential_invalid` | The key pair is malformed, or a live key is used without `PARMANA_ALLOW_LIVE_KEYS=true`. No call was made | The Vercel or local setting |
-| `unknown_capability` | The capability is not `razorpay:refund` | The release's capability |
+| `unknown_capability` | The capability is not `payments:refund` | The release's capability |
 | `upstream_error` (Razorpay refused) | Razorpay returned an error for the list or the refund. Its code and description are in the connector's message, which the service logs | Razorpay's dashboard |
 | `upstream_error` (not reached) | The network call failed | The message says whether a refund may exist. Follow the recovery steps in [RUNBOOK.md](RUNBOOK.md) |
 | `timeout` | A call ran out of the time limit | As above |

@@ -14,7 +14,7 @@ import { ConnectorError, type ConnectorExecutionContext, type ConnectorRequest, 
  * caller allows them. Amounts are in paise.
  */
 
-export const RAZORPAY_REFUND_CAPABILITY = "razorpay:refund";
+export const PAYMENTS_REFUND_CAPABILITY = "payments:refund";
 
 const API = "https://api.razorpay.com/v1";
 /** The time limit when the caller gives none. The service always gives one. */
@@ -100,10 +100,10 @@ export function createRazorpayConnector(options: RazorpayConnectorOptions = {}):
 
   return {
     system: "razorpay",
-    capabilities: Object.freeze([RAZORPAY_REFUND_CAPABILITY]),
+    capabilities: Object.freeze([PAYMENTS_REFUND_CAPABILITY]),
 
     async execute(request: ConnectorRequest, context: ConnectorExecutionContext): Promise<ConnectorResponse> {
-      if (request.capability !== RAZORPAY_REFUND_CAPABILITY) {
+      if (request.capability !== PAYMENTS_REFUND_CAPABILITY) {
         throw new ConnectorError("unknown_capability", `capability "${request.capability}" is not a Razorpay capability`);
       }
 

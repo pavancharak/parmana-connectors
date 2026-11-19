@@ -10,11 +10,11 @@ function release(amount: number): ExternalRelease {
   const now = Date.now();
   return {
     version: 1,
-    connectorId: "ext-razorpay:refund",
+    connectorId: "ext-payments:refund",
     audience: "https://connector.example.com/execute",
     businessTransactionId: "btx-1",
     authorizationId: "auth-1",
-    capability: "razorpay:refund",
+    capability: "payments:refund",
     target: PAYMENT,
     parameters: { amount },
     policy: { name: "customer-refund", version: "1.2.0" },
