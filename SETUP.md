@@ -33,6 +33,8 @@ The functions are `api/execute.ts` (served at `/api/execute`) and `api/health.ts
 | `SLACK_BOT_TOKEN` | Secret | `xoxb-<TOKEN>` (placeholder). Needed only when `PARMANA_CONNECTOR=slack` | Slack app settings, OAuth and Permissions, bot token. Use a test workspace until live use is approved |
 | `GITHUB_APP_CREDENTIAL` | Secret | `<APP_ID>:<INSTALLATION_ID>:<BASE64_PEM>` (placeholder). Needed only when `PARMANA_CONNECTOR=github` | GitHub App settings: its id, a generated private key, and the installation id. Use a test repository until live use is approved |
 | `HUBSPOT_PRIVATE_APP_TOKEN` | Secret | `<PRIVATE_APP_TOKEN>` (placeholder). Needed only when `PARMANA_CONNECTOR=hubspot` | HubSpot, Settings, Integrations, Private Apps. Use a test portal until live use is approved |
+| `ZOHO_ACCESS_TOKEN` | Secret | `<OAUTH_ACCESS_TOKEN>` (placeholder). Needed only when `PARMANA_CONNECTOR=zoho`. No spaces | Zoho API Console, an OAuth access token with only the Zoho Books invoice scopes the connector needs. Use a test organization until live use is approved. See [the Zoho README](src/connectors/zoho/README.md) |
+| `ZOHO_ORGANIZATION_ID` | Secret | `<DIGITS>` (placeholder). Needed only when `PARMANA_CONNECTOR=zoho`. Digits only | Zoho Books, the organization's settings. The service refuses to start without it |
 | `PAYTM_MERCHANT_CREDENTIAL` | Secret | `<MERCHANT_ID>:<MERCHANT_KEY>` (placeholder). Needed only when `PARMANA_CONNECTOR=paytm`. Staging credentials only | Paytm Dashboard, staging. Use staging only until production use is approved |
 | `RAZORPAY_KEY_PAIR` | Secret | `rzp_test_<KEY_ID>:<KEY_SECRET>` (placeholder) | Razorpay Dashboard, test mode, API Keys. Use a test key only until live use is approved |
 

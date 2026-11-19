@@ -34,10 +34,12 @@ It runs the code that performs approved actions in business systems. Each vendor
 | GitHub | `github:pr-fetch`, `github:pr-merge` | GitHub App; not run against a live app yet |
 | HubSpot | `hubspot:deal-fetch`, `hubspot:deal-update` | Private App; not run against a live portal yet |
 | Zerodha | `zerodha:place-order` | Paper only; no live mode in this repository |
+| Zoho Books | `zoho:invoice-fetch`, `zoho:invoice-create` | India data centre; not run against a live organization yet. See [the Zoho README](src/connectors/zoho/README.md) |
 
 ## Current work
 
 - **Migration from parmana-core (ADR-0018).** Accepted 2 November 2026. Every connector is now on `main` here. Core has removed Zerodha and Slack. Paytm's removal is in progress in core. GitHub and HubSpot are still in core. The steps for changing this repository are in [docs/WORKFLOW.md](docs/WORKFLOW.md).
+- **Zoho Books.** Built against the India data centre (`https://www.zohoapis.in/books/v3`). Next: a test run against a Zoho Books test organization, a policy and registration in parmana-core (neither exists yet), and the open items F28-4 and F26-6 in [the Zoho README](src/connectors/zoho/README.md#not-done-or-not-verified).
 - **Razorpay.** The signed-release test through the preview is the next thing to run. Then the production registration in parmana-core, with the operator as maker and Mamta as checker.
 - **Signing.** `main` requires signed commits. Each PR needs the operator's signature before merge. The commands are in [docs/WORKFLOW.md](docs/WORKFLOW.md), section 3.
 
@@ -57,7 +59,8 @@ It runs the code that performs approved actions in business systems. Each vendor
 | Manifest engine (`src/manifest.ts`, `src/connector.ts`) | Built and covered by unit tests. Not used by any connector in the service yet. See [docs/MANIFEST.md](docs/MANIFEST.md) |
 | Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md). Open items are not listed publicly yet |
 | Live money | Off. Live keys are refused unless the service is started with `PARMANA_ALLOW_LIVE_KEYS=true` |
-| Migration out of parmana-core (ADR-0018), as of 3 November 2026 | Six connector folders on `main`: Razorpay, Paytm, Slack, GitHub, HubSpot, Zerodha (paper only, no live mode). Removed from parmana-core: Zerodha (#295), Slack (#296), Paytm (#297), GitHub (#299), HubSpot (#300). Registrations in parmana-core still open: Razorpay, GitHub, HubSpot, Slack. Paytm needs none. The status of each registration is listed above, and the steps are in the connector READMEs |
+| Zoho Books connector (`zoho:invoice-fetch`, `zoho:invoice-create`) | Built and tested against a fake Zoho Books (17 tests). Uses the India data centre. Not run against a live organization. parmana-core has no policy or registration for it. Open: create does not check the release target (F28-4), and create has no duplicate check beyond the release ledger and `reference_number` (F26-6). See [the Zoho README](src/connectors/zoho/README.md) |
+| Migration out of parmana-core (ADR-0018), as of 3 November 2026 | Six connector folders on `main`: Razorpay, Paytm, Slack, GitHub, HubSpot, Zerodha (paper only, no live mode). The Zoho folder is also on `main` (added in #34); the ADR-0018 list does not name it. Removed from parmana-core: Zerodha (#295), Slack (#296), Paytm (#297), GitHub (#299), HubSpot (#300). Registrations in parmana-core still open: Razorpay, GitHub, HubSpot, Slack. Paytm needs none. The status of each registration is listed above, and the steps are in the connector READMEs |
 
 ## Documentation
 
@@ -66,6 +69,7 @@ It runs the code that performs approved actions in business systems. Each vendor
 | This README | What the repository is, how to run the service, and the layout |
 | [docs/API.md](docs/API.md) | The HTTP routes, the signed release, every answer, the limits and the log events |
 | [src/connectors/razorpay/README.md](src/connectors/razorpay/README.md) | The `razorpay:refund` capability: request, credential, behaviour, answer, errors |
+| [src/connectors/zoho/README.md](src/connectors/zoho/README.md) | The `zoho:invoice-fetch` and `zoho:invoice-create` capabilities: configuration, idempotency, test run, open items |
 | [docs/MANIFEST.md](docs/MANIFEST.md) | The manifest format and engine (tested, not used by a connector yet) |
 | [SETUP.md](SETUP.md) | The Vercel project and every environment variable |
 | [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md) | Deploying, verifying, shipping a change, troubleshooting, and recovering a release that was recorded but not confirmed |
