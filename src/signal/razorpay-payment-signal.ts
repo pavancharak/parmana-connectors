@@ -39,15 +39,15 @@ export async function answerPaymentRefundable(
     subject: query.subject,
   };
 
+  // A claim this source does not establish is a configuration error in the policy, not a missing
+  // payment. It throws, so the caller answers unavailable and the error is visible to an operator.
   if (
     query.claim !== PAYMENT_REFUNDABLE_CLAIM ||
     query.signalKey !== PAYMENT_REFUNDABLE_CLAIM
   ) {
-    return {
-      ...base,
-      status: "not_found",
-      reason: `this source does not establish "${query.claim}"`,
-    };
+    throw new SignalUnavailableError(
+      `this source does not establish "${query.claim}"`,
+    );
   }
   if (!PAYMENT_ID.test(query.subject)) {
     return {
@@ -57,17 +57,15 @@ export async function answerPaymentRefundable(
     };
   }
   const requested = query.parameters?.amount;
+  // A malformed query is refused before any call to Razorpay. It throws, as the claim check does.
   if (
     typeof requested !== "number" ||
     !Number.isInteger(requested) ||
     requested <= 0
   ) {
-    return {
-      ...base,
-      status: "not_found",
-      reason:
-        "the query does not carry a positive whole refund amount in paise",
-    };
+    throw new SignalUnavailableError(
+      "the query does not carry a positive whole refund amount in paise",
+    );
   }
 
   const authorization = `Basic ${Buffer.from(options.credential).toString("base64")}`;
