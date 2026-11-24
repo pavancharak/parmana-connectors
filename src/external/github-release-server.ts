@@ -1,19 +1,14 @@
 /**
  * Runs the GitHub external endpoint as an HTTP server.
-
-Run it with: npx tsx src/external/github-release-server.ts
  *
- * Environment (all required):
- *   PARMANA_PUBLIC_KEY_PEM   Parmana's public key, PEM. From client.publicKey("default").
- *   ENDPOINT_URL             This endpoint's URL exactly as registered in Parmana. Serve it over HTTPS
- *                            behind a TLS-terminating proxy.
- *   GITHUB_APP_CREDENTIAL    "<app id>:<installation id>:<base64 of the App's PEM key>".
- *
- * Optional:
- *   PORT                     Default 8080.
+ * Configuration is read by github-endpoint-config.ts. Required environment:
+ *   PARMANA_PUBLIC_KEY or PARMANA_PUBLIC_KEY_FILE   Parmana's Ed25519 public key (set one, not both)
+ *   PARMANA_RELEASE_AUDIENCE                        This endpoint's https URL, exactly as registered in Parmana
+ *   GITHUB_APP_CREDENTIAL                           "<app id>:<installation id>:<base64 of the App's PEM key>"
+ * Optional: PORT (default 8080).
  *
  * It accepts POST only, with a JSON body of at most 256 KiB, and answers with the
- * endpoint's status and JSON body. Nothing is logged except the start-up line.
+ * endpoint's status and JSON body. It logs only its start-up line.
  */
 import { createServer } from "node:http";
 
@@ -21,22 +16,18 @@ import { verifyParmanaRelease } from "@parmana/sdk";
 
 import { createGitHubReleaseEndpoint } from "../connectors/github/external-endpoint.js";
 
+import { loadGitHubEndpointConfig } from "./github-endpoint-config.js";
+
 const MAX_BODY_BYTES = 256 * 1024;
 
-function required(name: string): string {
-  const value = process.env[name];
-  if (value === undefined || value.trim() === "") {
-    throw new Error(`${name} is required. Its value is not shown.`);
-  }
-  return value.trim();
-}
+const config = loadGitHubEndpointConfig(process.env);
 
-const publicKeyPem = required("PARMANA_PUBLIC_KEY_PEM");
-const audience = required("ENDPOINT_URL");
-const credential = required("GITHUB_APP_CREDENTIAL");
-const port = Number(process.env["PORT"] ?? 8080);
-
-const handle = createGitHubReleaseEndpoint({ verify: verifyParmanaRelease, publicKeys: { default: publicKeyPem }, audience, credential });
+const handle = createGitHubReleaseEndpoint({
+  verify: verifyParmanaRelease,
+  publicKeys: { default: config.publicKey.export({ type: "spki", format: "pem" }).toString() },
+  audience: config.audience,
+  credential: config.credential,
+});
 
 const server = createServer((req, res) => {
   if (req.method !== "POST") {
@@ -77,6 +68,6 @@ const server = createServer((req, res) => {
   });
 });
 
-server.listen(port, () => {
-  console.log(`github release endpoint listening on port ${port}`);
+server.listen(config.port, () => {
+  console.log(`github release endpoint listening on port ${config.port}`);
 });
