@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ConnectorError, type ConnectorRequest } from "../../../src/connector-contract.js";
 import {
@@ -26,6 +26,9 @@ import {
 //
 // A missing variable under ALLOW_LIVE_GITHUB=1 is a failure, not a skip, so an
 // explicit live run cannot pass without doing anything.
+
+// Real GitHub calls, including a merge, can take longer than vitest's 5 second default.
+vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 
 const LIVE = process.env["ALLOW_LIVE_GITHUB"] === "1";
 const WRITES = process.env["ALLOW_LIVE_GITHUB_WRITES"] === "1";
