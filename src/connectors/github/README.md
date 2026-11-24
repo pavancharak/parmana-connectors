@@ -157,4 +157,4 @@ Each capability is documented in [CAPABILITIES.md](CAPABILITIES.md): its paramet
 
 ## Live tests
 
-The live tests call GitHub's real API with a real GitHub App. They run only with `ALLOW_LIVE_GITHUB=1`. Setup, variables, disposable pull requests and troubleshooting are in [tests/connectors/github/LIVE.md](../../../tests/connectors/github/LIVE.md).
+The live tests call GitHub's real API with a real GitHub App. They run only with `ALLOW_LIVE_GITHUB=1`. Setup, variables, disposable pull requests and troubleshooting are in [LIVE.md](LIVE.md).
