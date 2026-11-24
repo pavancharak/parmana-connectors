@@ -154,7 +154,7 @@ The test count for this directory is 56.
 
 ## Not covered
 
-- **Live GitHub.** Most tests use a fake GitHub. `tests/connectors/github/github-live.test.ts` runs the same capabilities against the real API, but only with `ALLOW_LIVE_GITHUB=1`. Setup is in [LIVE.md](LIVE.md). The last recorded run passed all five live tests, on 2026-11-24.
+- **Live GitHub.** Most tests use a fake GitHub. `tests/connectors/github/github-live.test.ts` runs the same capabilities against the real API, but only with `ALLOW_LIVE_GITHUB=1`. Setup is in [LIVE.md](LIVE.md). The last recorded run passed all five live tests, on 2026-11-24. See [LIVE-RUN-2026-11-24.md](LIVE-RUN-2026-11-24.md).
 - **Policies.** The policy names in the table above come from the production configuration. The connector does not check them.
 - **Concurrency.** Two merges of the same pull request are not coordinated by the connector. GitHub decides which one wins.
 - **Rate limits.** A GitHub rate-limit answer is an HTTP error. It is reported as `upstream_error` with its status, and is not retried.
