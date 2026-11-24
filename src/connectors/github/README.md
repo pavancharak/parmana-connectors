@@ -25,6 +25,8 @@ A merge is refused unless:
 - The caller reports that required reviews, status checks and branch protection are satisfied, and the risk score is 20 or lower.
 - `expectedHeadSha`, if given, matches the current head.
 
+Each capability is documented in [CAPABILITIES.md](CAPABILITIES.md): its parameters, every GitHub call, every error, and the test that covers it.
+
 ## Architecture
 
 ```
@@ -39,6 +41,7 @@ Agent ──request──► Parmana core (policy, approval, signed decision)
 ```
 
 - **Code:** `github-connector.ts` in this folder. It imports only Node built-ins and the shared contract.
+- **External endpoint:** `external-endpoint.ts` in this folder runs the connector as an endpoint that Parmana releases signed requests to, for all three GitHub capabilities. It takes the signature verifier as an argument, so this folder imports nothing from `@parmana/sdk`. The server that wires in `verifyParmanaRelease` is `src/external/github-release-server.ts`. See [EXTERNAL.md](EXTERNAL.md).
 - **Tests:** `tests/connectors/github/`. They use a fake GitHub server and a generated RSA key, and do not contact GitHub.
 
 ## Requirements
@@ -135,6 +138,8 @@ Confirm that a policy is in effect on your instance before you test. See the `/p
 - **Not yet verified live:** the request shapes have not been checked against a live GitHub App. Treat the first production run as a test.
 - **Scope:** pull requests only. The connector does not label or comment on issues.
 
+- The external endpoint keeps its first answers in memory. A restart forgets them, so a replayed release could act again. Production needs a durable store. See [EXTERNAL.md](EXTERNAL.md).
+
 ## Operations
 
 For production steps, rotation, recovery and stopping the connector, see [RUNBOOK.md](RUNBOOK.md) in this folder.
@@ -151,12 +156,12 @@ Read `CONTRIBUTING.md` before you open a pull request. Report vulnerabilities pr
 
 GitHub's REST API documents no idempotency key for creating comments, and the connector sends none. A retried comment POST can create a duplicate. A retried merge also gives no key, so the connector cannot tell a lost response from a refusal. Open: check for the caller's marker in existing comments before posting.
 
-## Capabilities
-
-Each capability is documented in [CAPABILITIES.md](CAPABILITIES.md): its parameters, every GitHub call, every error, and the test that covers it.
-
 ## Live tests
 
 The live tests call GitHub's real API with a real GitHub App. They run only with `ALLOW_LIVE_GITHUB=1`. Setup, variables, disposable pull requests and troubleshooting are in [LIVE.md](LIVE.md).
 
 Results of the most recent live run are in [LIVE-RUN-2026-11-24.md](LIVE-RUN-2026-11-24.md).
+
+## External endpoint
+
+The GitHub connector can run as an external endpoint that Parmana releases signed requests to, for all three capabilities: `github:pr-fetch`, `github:pr-merge` and `github:comment`. See [EXTERNAL.md](EXTERNAL.md).
