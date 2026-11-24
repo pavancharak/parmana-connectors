@@ -5,7 +5,7 @@ A working book about how Razorpay is connected to Parmana: what was built, what 
 **Status as of 2026-11-08.** Read this first.
 
 - **Removed from `parmana-core`.** The Razorpay refund demo and its database tables were removed from core on 2026-08-12 and 2026-09-16.
-- **Lives in `parmana-connectors`.** The current `payments:refund` connector is in that repository, at `src/connectors/razorpay/`. It was built and tested against a fake Razorpay, and run in Razorpay's test mode on 29 October 2026 (4 of 4 checks passed). It has not been run with live keys.
+- **Lives in `parmana-connectors`.** The current `payments:refund` connector is in that repository, at `src/connectors/razorpay/`. It was built and tested against a fake Razorpay, and run in Razorpay's test mode on 24 November 2026 with the current code (4 of 4 checks passed), and on 29 October 2026 before the header change. It has not been run with live keys.
 - **In review in `parmana-core`.** A read-only Razorpay payment signal source and draft refund policies are on the branch `feat/razorpay-payment-signal`, in pull request #512. It is not merged, and its required checks are failing.
 - **Never live.** No Razorpay refund in these repositories has moved live money. The connector refuses `rzp_live_` keys unless `PARMANA_ALLOW_LIVE_KEYS=true`.
 

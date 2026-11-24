@@ -130,15 +130,15 @@ The service refuses to run the same release twice, because the replay record alr
 [`src/connectors/razorpay/test-run.mjs`](https://github.com/pavancharak/parmana-connectors/blob/main/src/connectors/razorpay/test-run.mjs) runs the connector against Razorpay's test API from your own machine:
 
 ```bash
-export RAZORPAY_KEY_PAIR="rzp_test_...:<secret>"
-export RAZORPAY_TEST_PAYMENT_ID="pay_..."
+RAZORPAY_KEY_PAIR=rzp_test_...:<secret>
+RAZORPAY_TEST_PAYMENT_ID=pay_...   # both in .env.live
 npm ci && npm run build
-node --env-file-if-exists=.env src/connectors/razorpay/test-run.mjs
+node --env-file-if-exists=.env.live src/connectors/razorpay/test-run.mjs
 ```
 
 It makes one refund of `RAZORPAY_TEST_AMOUNT` paise (100 by default). It checks that a repeat returns the same refund. It also checks two refusals: a target that is not a payment id, and a zero amount. It refuses any key that is not `rzp_test_`, and it never prints the key. Test-mode refunds move no money.
 
-The repo's status notes record a run on 29 October 2026 that passed 4 of 4 checks. No live run is recorded.
+The last test-mode run, on 24 November 2026 with the current code, passed 4 of 4 checks. An earlier run on 29 October 2026 also passed, before the header change. No live run is recorded.
 
 ### 3.8 Not covered yet
 

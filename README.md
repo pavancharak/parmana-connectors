@@ -207,7 +207,7 @@ Windows PowerShell uses the same two commands. Run them from the repository root
 
 The check creates one refund of `RAZORPAY_TEST_AMOUNT` paise (default 100), checks that a repeat returns the same refund, and checks two refusals. Test-mode refunds move no money. The script refuses anything that isn't a test key, and it never prints the key. `.env.example` lists the variable names for every connector's live settings, with blank values.
 
-Run it on the branch that contains the current connector. The header change (`X-Refund-Idempotency`) is only covered by a run made after that change. The last recorded pass, on 29 October 2026, predates it.
+Run it on the branch that contains the current connector. The header change (`X-Refund-Idempotency`) is only covered by a run made after that change. The last recorded pass, on 24 November 2026, is after it.
 
 ## Dependencies
 

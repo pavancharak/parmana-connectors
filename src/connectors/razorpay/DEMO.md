@@ -49,7 +49,7 @@ git checkout claude/elegant-hypatia-wy5oqu
 npm ci
 npm run build
 $env:RAZORPAY_KEY_PAIR = "rzp_test_<key id>:<key secret>"
-$env:RAZORPAY_TEST_PAYMENT_ID = "pay_<your test payment id>"
+# Or set both values in .env.live, the same as above
 node src/connectors/razorpay/test-run.mjs
 ```
 
@@ -64,8 +64,8 @@ cd /path/to/parmana-connectors
 git checkout claude/elegant-hypatia-wy5oqu
 npm ci
 npm run build
-export RAZORPAY_KEY_PAIR="rzp_test_<key id>:<key secret>"
-export RAZORPAY_TEST_PAYMENT_ID="pay_<your test payment id>"
+RAZORPAY_KEY_PAIR=rzp_test_<key id>:<key secret>
+RAZORPAY_TEST_PAYMENT_ID=pay_<your test payment id>   # both in .env.live
 node src/connectors/razorpay/test-run.mjs
 ```
 
@@ -83,7 +83,7 @@ RAZORPAY_TEST_PAYMENT_ID=pay_<your test payment id>
 Then run:
 
 ```bash
-node --env-file-if-exists=.env src/connectors/razorpay/test-run.mjs
+node --env-file-if-exists=.env.live src/connectors/razorpay/test-run.mjs
 ```
 
 ## Reading the output

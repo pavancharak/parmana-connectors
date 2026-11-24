@@ -1,5 +1,6 @@
 // Runs the Razorpay connector against Razorpay's TEST mode, from your own machine.
 // Needs: RAZORPAY_KEY_PAIR="rzp_test_...:<secret>" and RAZORPAY_TEST_PAYMENT_ID="pay_..." (a captured test payment).
+// Put them in .env.live (git-ignored) and run: node --env-file-if-exists=.env.live src/connectors/razorpay/test-run.mjs
 // Optional: RAZORPAY_TEST_AMOUNT in paise (default 100). Refunds in test mode move no money.
 // The key is read from the environment and never printed.
 import { randomUUID } from "node:crypto";
