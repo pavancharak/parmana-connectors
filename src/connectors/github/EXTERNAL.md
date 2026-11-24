@@ -9,7 +9,7 @@ This is the GitHub connector run as an external endpoint (ADR-0013). Parmana rel
 | Status | When |
 | --- | --- |
 | 200 | The release is verified and acted on, or it was answered before (the first answer is returned). |
-| 401 | The body is not `{ release, signature }`, the signature does not verify, the audience differs from `ENDPOINT_URL`, or the release has expired. GitHub is not called. |
+| 401 | The body is not `{ release, signature }`, the signature does not verify, the audience differs from `PARMANA_RELEASE_AUDIENCE`, or the release has expired. GitHub is not called. |
 | 403 | A valid release for a capability this endpoint does not serve, such as `github:pr-delete`. GitHub is not called. |
 | 405 | Not a POST. |
 | 500 | The handler failed unexpectedly. |
@@ -18,14 +18,17 @@ A GitHub failure is still answered with status 200 and `success: false`, with th
 
 ### Environment (`src/external/github-release-server.ts`)
 
+The names match the connectors' Razorpay service. The full rules are in `github-endpoint-config.ts`.
+
 | Variable | Value |
 | --- | --- |
-| `PARMANA_PUBLIC_KEY_PEM` | Parmana's public key, PEM, from `client.publicKey("default")` |
-| `ENDPOINT_URL` | This endpoint's URL exactly as registered in Parmana |
+| `PARMANA_PUBLIC_KEY` | Parmana's Ed25519 public key as PEM text. Set this or `PARMANA_PUBLIC_KEY_FILE`, never both. |
+| `PARMANA_PUBLIC_KEY_FILE` | A path to the same PEM. |
+| `PARMANA_RELEASE_AUDIENCE` | This endpoint's `https://` URL, exactly as registered in Parmana |
 | `GITHUB_APP_CREDENTIAL` | `<app id>:<installation id>:<base64 of the App's PEM key>` |
 | `PORT` | Optional, default 8080 |
 
-Run it with `npx tsx src/external/github-release-server.ts`. Serve it over HTTPS behind a TLS-terminating proxy. Parmana releases only to https.
+Run it with `npm run start:github-endpoint`. Serve it over HTTPS behind a TLS-terminating proxy. Parmana releases only to https.
 
 ### What is tested
 
