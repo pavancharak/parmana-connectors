@@ -20,7 +20,9 @@ import {
 //   TEST_GITHUB_TARGET                      "<owner>/<repo>#<number>" of a test pull request (read only)
 //
 //   ALLOW_LIVE_GITHUB_WRITES=1              required for the comment and merge tests
-//   TEST_GITHUB_WRITE_TARGET                a DISPOSABLE pull request, for comment and merge. Never a real one.
+//   TEST_GITHUB_WRITE_TARGET                a DISPOSABLE pull request, for the comment test. Never a real one.
+//   TEST_GITHUB_MERGE_TARGET                a DISPOSABLE pull request the merge test merges. Never a real one.
+//   TEST_GITHUB_STALE_TARGET                a second DISPOSABLE, still open, pull request for the stale-SHA refusal test.
 //
 // A missing variable under ALLOW_LIVE_GITHUB=1 is a failure, not a skip, so an
 // explicit live run cannot pass without doing anything.
@@ -108,7 +110,7 @@ describeWrites("github live: comment on a disposable pull request", () => {
 
 describeWrites("github live: merge a disposable pull request", () => {
   it("github:pr-merge with the current head SHA merges the disposable pull request", async () => {
-    const { target } = parseTarget(requireEnv("TEST_GITHUB_WRITE_TARGET"));
+    const { target } = parseTarget(requireEnv("TEST_GITHUB_MERGE_TARGET"));
     const read = await createGitHubConnector().execute(request(GITHUB_PR_FETCH_CAPABILITY, target), context());
     const headSha = (read.metadata.body as Record<string, unknown>)["headSha"] as string;
 
@@ -121,7 +123,8 @@ describeWrites("github live: merge a disposable pull request", () => {
   });
 
   it("github:pr-merge refuses a stale head SHA and GitHub does not merge", async () => {
-    const { target } = parseTarget(requireEnv("TEST_GITHUB_WRITE_TARGET"));
+    // Runs against a second disposable pull request, so it is not already merged.
+    const { target } = parseTarget(requireEnv("TEST_GITHUB_STALE_TARGET"));
     const stale = "0".repeat(40);
 
     const error = await createGitHubConnector()
