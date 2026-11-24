@@ -154,3 +154,7 @@ GitHub's REST API documents no idempotency key for creating comments, and the co
 ## Capabilities
 
 Each capability is documented in [CAPABILITIES.md](CAPABILITIES.md): its parameters, every GitHub call, every error, and the test that covers it.
+
+## Live tests
+
+The live tests call GitHub's real API with a real GitHub App. They run only with `ALLOW_LIVE_GITHUB=1`. Setup, variables, disposable pull requests and troubleshooting are in [tests/connectors/github/LIVE.md](../../../tests/connectors/github/LIVE.md).
