@@ -57,7 +57,7 @@ It runs the code that performs approved actions in institutional systems. Each v
 | Part | State |
 | --- | --- |
 | Service: signed-release verification, single-use reservation, health check, graceful shutdown, configuration that refuses to start when unsafe | Built and tested. Deployed to Vercel production at `https://parmana-connectors.vercel.app`, with no production traffic yet |
-| Razorpay connector (`payments:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 24 November 2026, with the current code: 4 of 4 checks passed. An earlier run on 29 October 2026 also passed 4 of 4, before the header change. Not run with live keys. No signed release has yet been run end to end through the deployed service |
+| Razorpay connector (`payments:refund`) | Built and tested against a fake Razorpay. Run against Razorpay's test mode on 24 November 2026, on `main` after PR #87 merged: 4 of 4 checks passed. An earlier run on 29 October 2026 also passed 4 of 4, before the header change. Not run with live keys. No signed release has yet been run end to end through the deployed service |
 | Manifest engine (`src/manifest.ts`, `src/connector.ts`) | Built and covered by unit tests. Not used by any connector in the service yet. See [docs/MANIFEST.md](docs/MANIFEST.md) |
 | Deployment, secrets and operations | Vercel production with a Supabase replay database. Setup in [SETUP.md](SETUP.md) and [RUNBOOK.md](src/connectors/razorpay/RUNBOOK.md). Open items are not listed publicly yet |
 | Live money | Off. Live keys are refused unless the service is started with `PARMANA_ALLOW_LIVE_KEYS=true` |
