@@ -63,3 +63,7 @@ There is nothing to operate in paper mode. Do not add a credential or register t
 ## Contributing and security
 
 Read `CONTRIBUTING.md` before you open a pull request. Report vulnerabilities privately, as described in `SECURITY.md`. Do not open a public issue for them.
+
+## Idempotency
+
+No idempotency key is documented for Kite Connect order placement in the sources checked, and the connector sends none. A placement retried after a timeout can place a second order. Open: place with a unique `tag` and check the order book by tag before any retry. Confirm the tag rules in the official Kite Connect documentation first.

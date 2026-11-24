@@ -124,3 +124,7 @@ No Paytm refund policy is listed in `parmana-core/policies/` at the commit I che
 ## Contributing and security
 
 Read `CONTRIBUTING.md` before you open a pull request. Report vulnerabilities privately, as described in `SECURITY.md`. Do not open a public issue for them.
+
+## Idempotency
+
+The refund's `refId` is the idempotency handle. It is the caller's `refundReference`, or the `businessTransactionId` when none is given. Before each refund, the connector asks Paytm for that `refId`'s status and returns a confirmed refund instead of sending another. Paytm's refund-status documentation says a merchant `refId` must be unique per refund (`https://www.paytmpayments.com/docs/refund-status-api`). Not confirmed: the exact answer Paytm's v2 refund call gives for a reused `refId`. This stays open under F26-5.

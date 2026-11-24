@@ -11,6 +11,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:live:github": "node --env-file-if-exists=.env.live node_modules/vitest/vitest.mjs run tests/connectors/github/github-live.test.ts",
     "start": "node --env-file-if-exists=.env dist/main.js",
     "ledger:archive": "node --env-file-if-exists=.env dist/service/archive-release-ledger.js",
     "check:config": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/service/check-config-cli.js"

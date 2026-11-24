@@ -24,6 +24,8 @@ const REFUND_PAGE_SIZE = 100;
 /** Pages read before refusing. 1,000 refunds on one payment is far beyond normal use. */
 const MAX_REFUND_PAGES = 10;
 const PAYMENT_ID = /^pay_[A-Za-z0-9]{6,40}$/;
+/** Razorpay refund idempotency key: at least 10 characters, letters, digits, underscore or hyphen. */
+const RAZORPAY_IDEMPOTENCY_KEY = /^[A-Za-z0-9_-]{10,}$/;
 const KEY_ID = /^rzp_(test|live)_[A-Za-z0-9]+$/;
 
 export interface RazorpayConnectorOptions {
@@ -64,7 +66,7 @@ export function createRazorpayConnector(options: RazorpayConnectorOptions = {}):
    * One call to Razorpay, limited by what is left of the overall time limit.
    * A GET never creates a refund. A POST may have, if it was sent and no answer came back.
    */
-  async function call(stage: Stage, method: "GET" | "POST", path: string, ctx: CallContext, body?: unknown): Promise<RazorpayCall> {
+  async function call(stage: Stage, method: "GET" | "POST", path: string, ctx: CallContext, body?: unknown, extraHeaders?: Record<string, string>): Promise<RazorpayCall> {
     const remaining = ctx.deadline - Date.now();
     if (remaining <= 0) {
       throw noAnswer("timeout", stage, method, false, ctx.receipt);
@@ -77,6 +79,7 @@ export function createRazorpayConnector(options: RazorpayConnectorOptions = {}):
         headers: {
           Authorization: ctx.authorization,
           ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+          ...extraHeaders,
         },
         body: body === undefined ? null : JSON.stringify(body),
         // The credential must never reach another host.
@@ -161,12 +164,23 @@ export function createRazorpayConnector(options: RazorpayConnectorOptions = {}):
         }
       }
 
+      // Razorpay's refund idempotency key. Razorpay rejects keys under 10 characters or with other
+      // characters, so such a receipt is sent without the key and relies on the check above alone.
+      const idempotencyHeaders = RAZORPAY_IDEMPOTENCY_KEY.test(receipt) ? { "X-Refund-Idempotency": receipt } : undefined;
       const created = await call("creating the refund", "POST", `/payments/${paymentId}/refund`, ctx, {
         amount,
         speed: "normal",
         receipt,
         notes: { parmanaBusinessTransactionId: receipt },
-      });
+      }, idempotencyHeaders);
+      if (created.status === 409) {
+        // Razorpay answers 409 when a request with this key is still in progress, or the key was
+        // used with other parameters. A refund may exist, so this is not a refusal.
+        throw new ConnectorError(
+          "upstream_error",
+          `Razorpay answered HTTP 409 while creating the refund: a request with idempotency key ${receipt} is in progress or was used with other parameters. A refund may have been created: check Razorpay for a refund with receipt ${receipt} before any other action`,
+        );
+      }
       if (created.status !== 200) {
         // A 4xx is Razorpay rejecting the request, so no refund was created. Anything else (a 5xx,
         // a gateway timeout, an unexpected status) may come after Razorpay created the refund.
