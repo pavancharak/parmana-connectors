@@ -189,23 +189,23 @@ Read [docs/ADDING-A-CONNECTOR.md](docs/ADDING-A-CONNECTOR.md). It covers the two
 
 This checks the connector against Razorpay's test API. Run it on your own machine, with a test key and a captured test payment.
 
-Put the two values in `.env` in the repository root. `.env` is git-ignored, so the key never reaches the repository:
+Put the two values in `.env.live` in the repository root. All live-test settings for every connector go in this one file, and it is git-ignored, so the key never reaches the repository:
 
 ```bash
 RAZORPAY_KEY_PAIR=rzp_test_<KEY_ID>:<KEY_SECRET>
 RAZORPAY_TEST_PAYMENT_ID=pay_<PAYMENT_ID>
 ```
 
-Then run the check. The command loads `.env` itself, so no `export` lines are needed:
+Then run the check. The command loads `.env.live` itself, so no `export` lines are needed:
 
 ```bash
 npm ci && npm run build
-node --env-file-if-exists=.env src/connectors/razorpay/test-run.mjs
+node --env-file-if-exists=.env.live src/connectors/razorpay/test-run.mjs
 ```
 
 Windows PowerShell uses the same two commands. Run them from the repository root.
 
-The check creates one refund of `RAZORPAY_TEST_AMOUNT` paise (default 100), checks that a repeat returns the same refund, and checks two refusals. Test-mode refunds move no money. The script refuses anything that isn't a test key, and it never prints the key. `.env.example` lists the variable names with blank values.
+The check creates one refund of `RAZORPAY_TEST_AMOUNT` paise (default 100), checks that a repeat returns the same refund, and checks two refusals. Test-mode refunds move no money. The script refuses anything that isn't a test key, and it never prints the key. `.env.example` lists the variable names for every connector's live settings, with blank values.
 
 Run it on the branch that contains the current connector. The header change (`X-Refund-Idempotency`) is only covered by a run made after that change. The last recorded pass, on 29 October 2026, predates it.
 
