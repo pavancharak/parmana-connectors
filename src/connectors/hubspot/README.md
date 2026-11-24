@@ -118,3 +118,7 @@ Confirm that the policy version is in effect on your instance before you test. S
 ## Contributing and security
 
 Read `CONTRIBUTING.md` before you open a pull request. Report vulnerabilities privately, as described in `SECURITY.md`. Do not open a public issue for them.
+
+## Idempotency
+
+HubSpot's CRM API documents no idempotency key for object creation, and the connector sends none. A retry after a lost response can create a duplicate record. Open: search by a stable external ID before creating, or reconcile after a timeout.

@@ -146,3 +146,7 @@ For production steps, rotation, recovery and stopping the connector, see [RUNBOO
 ## Contributing and security
 
 Read `CONTRIBUTING.md` before you open a pull request. Report vulnerabilities privately, as described in `SECURITY.md`. Do not open a public issue for them.
+
+## Idempotency
+
+GitHub's REST API documents no idempotency key for creating comments, and the connector sends none. A retried comment POST can create a duplicate. A retried merge also gives no key, so the connector cannot tell a lost response from a refusal. Open: check for the caller's marker in existing comments before posting.

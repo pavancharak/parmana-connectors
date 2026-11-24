@@ -12,6 +12,7 @@ interface Recorded {
   method: string;
   url: string;
   auth: string | null;
+  idempotency: string | null;
   body: unknown;
 }
 
@@ -39,6 +40,7 @@ function fakeRazorpay(
       method,
       url,
       auth: headers.get("authorization"),
+      idempotency: headers.get("x-refund-idempotency"),
       body: init?.body === undefined || init.body === null ? undefined : JSON.parse(String(init.body)),
     });
     if (options.hang) {
@@ -94,6 +96,31 @@ describe("createRazorpayConnector", () => {
     expect(razorpay.calls[0]?.url).toContain(`/payments/${PAYMENT}/refunds`);
     expect(razorpay.calls[1]?.body).toMatchObject({ amount: 100, receipt: TRANSACTION });
     expect(razorpay.calls[1]?.auth).toBe(`Basic ${Buffer.from("rzp_test_abc123:secretvalue").toString("base64")}`);
+  });
+
+  it("sends the receipt as Razorpay's refund idempotency key on the create call", async () => {
+    const razorpay = fakeRazorpay();
+    await createRazorpayConnector({ fetch: razorpay.fetch }).execute(request(), context());
+
+    expect(razorpay.calls[0]?.idempotency).toBeNull();
+    expect(razorpay.calls[1]?.idempotency).toBe(TRANSACTION);
+  });
+
+  it("sends no idempotency key when the receipt is too short for Razorpay to accept", async () => {
+    const razorpay = fakeRazorpay();
+    await createRazorpayConnector({ fetch: razorpay.fetch }).execute(request({ businessTransactionId: "txn-1" }), context());
+
+    expect(razorpay.calls[1]?.idempotency).toBeNull();
+    expect(razorpay.calls[1]?.body).toMatchObject({ receipt: "txn-1" });
+  });
+
+  it("treats a 409 on create as possibly created, not as a refusal", async () => {
+    const razorpay = fakeRazorpay({ refundStatus: 409 });
+
+    await expect(createRazorpayConnector({ fetch: razorpay.fetch }).execute(request(), context())).rejects.toMatchObject({
+      code: "upstream_error",
+      message: expect.stringContaining(`check Razorpay for a refund with receipt ${TRANSACTION}`),
+    });
   });
 
   it("returns the earlier refund instead of refunding again when the receipt already exists", async () => {

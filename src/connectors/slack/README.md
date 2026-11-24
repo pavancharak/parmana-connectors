@@ -121,3 +121,7 @@ Confirm that the policy version is in effect on your instance before you test. S
 ## Contributing and security
 
 Read `CONTRIBUTING.md` before you open a pull request. Report vulnerabilities privately, as described in `SECURITY.md`. Do not open a public issue for them.
+
+## Idempotency
+
+No provider idempotency key is documented for `chat.postMessage`, and the connector sends none. A retry after a lost response can post the message twice. The connector does not retry on its own, so a duplicate needs a caller retry. Source checked: `https://docs.slack.dev/reference/methods/chat.postMessage`. Open: deduplicate on the caller's request ID before posting.

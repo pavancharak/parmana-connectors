@@ -93,3 +93,7 @@ The last recorded run passed 4 of 4 checks on 29 October 2026, as noted in the o
 - A payment with more than 1,000 refunds is refused, not refunded. Such a payment needs a person to check Razorpay.
 - Live keys. Live money is off, and no live run is recorded.
 - The paging parameters (`count`, `skip`) are used as Razorpay's API reference describes them. The test-mode run has not yet been repeated against them.
+
+## Idempotency
+
+The refund create call sends the receipt (Parmana's `businessTransactionId`) as Razorpay's `X-Refund-Idempotency` header. Razorpay requires a key of at least 10 characters, made of letters, digits, underscores and hyphens. A receipt that does not meet that rule is sent without the header, and the repeat check above is the only guard. A 409 answer means a request with that key is still in progress, or the key was used with other parameters. The connector reports that as possibly created, and does not treat it as a refusal. Source: Razorpay refund idempotency documentation, `https://razorpay.com/docs/api/refunds/normal-refunds-idempotent`.
