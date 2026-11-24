@@ -1,6 +1,6 @@
 import { generateKeyPairSync, sign } from "node:crypto";
 
-import { canonicalSerialize } from "@parmana/sdk";
+import { canonicalSerialize, verifyParmanaRelease } from "@parmana/sdk";
 import { describe, expect, it } from "vitest";
 
 import { createGitHubReleaseEndpoint } from "../../../src/connectors/github/external-endpoint.js";
@@ -72,6 +72,7 @@ function signed(body: Record<string, unknown>, key = parmana.privateKey) {
 function endpoint(fake = fakeGitHub(), answers = new Map<string, Record<string, unknown>>()) {
   return {
     handle: createGitHubReleaseEndpoint({
+      verify: verifyParmanaRelease,
       publicKeys: { [KEY_ID]: PUBLIC_PEM },
       audience: AUDIENCE,
       credential: CREDENTIAL,

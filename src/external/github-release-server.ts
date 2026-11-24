@@ -1,7 +1,7 @@
 /**
  * Runs the GitHub external endpoint as an HTTP server.
 
-Run it with: npx tsx src/connectors/github/external-server.ts
+Run it with: npx tsx src/external/github-release-server.ts
  *
  * Environment (all required):
  *   PARMANA_PUBLIC_KEY_PEM   Parmana's public key, PEM. From client.publicKey("default").
@@ -17,7 +17,9 @@ Run it with: npx tsx src/connectors/github/external-server.ts
  */
 import { createServer } from "node:http";
 
-import { createGitHubReleaseEndpoint } from "./external-endpoint.js";
+import { verifyParmanaRelease } from "@parmana/sdk";
+
+import { createGitHubReleaseEndpoint } from "../connectors/github/external-endpoint.js";
 
 const MAX_BODY_BYTES = 256 * 1024;
 
@@ -34,7 +36,7 @@ const audience = required("ENDPOINT_URL");
 const credential = required("GITHUB_APP_CREDENTIAL");
 const port = Number(process.env["PORT"] ?? 8080);
 
-const handle = createGitHubReleaseEndpoint({ publicKeys: { default: publicKeyPem }, audience, credential });
+const handle = createGitHubReleaseEndpoint({ verify: verifyParmanaRelease, publicKeys: { default: publicKeyPem }, audience, credential });
 
 const server = createServer((req, res) => {
   if (req.method !== "POST") {

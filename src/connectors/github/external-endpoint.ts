@@ -5,7 +5,33 @@ import {
   GITHUB_PR_FETCH_CAPABILITY,
   GITHUB_PR_MERGE_CAPABILITY,
 } from "./github-connector.js";
-import { verifyParmanaRelease, type ParmanaRelease } from "@parmana/sdk";
+/**
+ * The release as this endpoint reads it. The verifier is passed in, so this
+ * folder imports nothing from @parmana/sdk. The wiring that supplies
+ * verifyParmanaRelease lives outside the connector folder (src/external/).
+ */
+export interface ParmanaRelease {
+  readonly capability: string;
+  readonly target: string;
+  readonly parameters: Readonly<Record<string, unknown>>;
+  readonly businessTransactionId: string;
+}
+
+export interface VerifyReleaseOptions {
+  readonly publicKeys: Readonly<Record<string, string>>;
+  readonly audience: string;
+  readonly isAlreadyExecuted: (businessTransactionId: string) => boolean;
+  readonly now?: Date;
+}
+
+/** Same result shape as verifyParmanaRelease in @parmana/sdk. */
+export type VerifyRelease = (
+  body: unknown,
+  options: VerifyReleaseOptions,
+) => Promise<
+  | { readonly valid: true; readonly release: ParmanaRelease; readonly alreadyExecuted: boolean }
+  | { readonly valid: false; readonly errors: readonly string[] }
+>;
 
 /**
  * The GitHub connector as an external connector endpoint (ADR-0013).
@@ -34,6 +60,8 @@ export const GITHUB_ENDPOINT_CAPABILITIES: ReadonlySet<string> = new Set([
 ]);
 
 export interface GitHubReleaseEndpointOptions {
+  /** Checks the signed body. Pass verifyParmanaRelease from @parmana/sdk. */
+  readonly verify: VerifyRelease;
   /** Key id to PEM. Usually `{ default: <PEM from client.publicKey("default")> }`. */
   readonly publicKeys: Readonly<Record<string, string>>;
   /** This endpoint's URL exactly as registered in Parmana. */
@@ -59,7 +87,7 @@ export function createGitHubReleaseEndpoint(options: GitHubReleaseEndpointOption
   const connector = createGitHubConnector(options.fetch !== undefined ? { fetch: options.fetch } : {});
 
   return async (body: unknown): Promise<EndpointAnswer> => {
-    const verification = await verifyParmanaRelease(body, {
+    const verification = await options.verify(body, {
       publicKeys: options.publicKeys,
       audience: options.audience,
       isAlreadyExecuted: (id) => answers.has(id),

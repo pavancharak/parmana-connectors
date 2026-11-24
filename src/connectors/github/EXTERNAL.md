@@ -16,7 +16,7 @@ This is the GitHub connector run as an external endpoint (ADR-0013). Parmana rel
 
 A GitHub failure is still answered with status 200 and `success: false`, with the connector's error code. That answer is stored as the first answer, so a replay cannot act again.
 
-### Environment (`external-server.ts`)
+### Environment (`src/external/github-release-server.ts`)
 
 | Variable | Value |
 | --- | --- |
@@ -25,7 +25,7 @@ A GitHub failure is still answered with status 200 and `success: false`, with th
 | `GITHUB_APP_CREDENTIAL` | `<app id>:<installation id>:<base64 of the App's PEM key>` |
 | `PORT` | Optional, default 8080 |
 
-Run it with `npx tsx src/connectors/github/external-server.ts`. Serve it over HTTPS behind a TLS-terminating proxy. Parmana releases only to https.
+Run it with `npx tsx src/external/github-release-server.ts`. Serve it over HTTPS behind a TLS-terminating proxy. Parmana releases only to https.
 
 ### What is tested
 

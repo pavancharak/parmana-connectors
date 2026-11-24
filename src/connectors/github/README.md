@@ -41,7 +41,7 @@ Agent ──request──► Parmana core (policy, approval, signed decision)
 ```
 
 - **Code:** `github-connector.ts` in this folder. It imports only Node built-ins and the shared contract.
-- **External endpoint:** `external-endpoint.ts` and `external-server.ts` in this folder. They run the connector as an endpoint that Parmana releases signed requests to, for all three GitHub capabilities. They also import `@parmana/sdk` to verify Parmana's signature. See [EXTERNAL.md](EXTERNAL.md).
+- **External endpoint:** `external-endpoint.ts` in this folder runs the connector as an endpoint that Parmana releases signed requests to, for all three GitHub capabilities. It takes the signature verifier as an argument, so this folder imports nothing from `@parmana/sdk`. The server that wires in `verifyParmanaRelease` is `src/external/github-release-server.ts`. See [EXTERNAL.md](EXTERNAL.md).
 - **Tests:** `tests/connectors/github/`. They use a fake GitHub server and a generated RSA key, and do not contact GitHub.
 
 ## Requirements
