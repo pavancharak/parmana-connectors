@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:live:github": "node --env-file-if-exists=.env.live node_modules/vitest/vitest.mjs run tests/connectors/github/github-live.test.ts",
     "start:github-endpoint": "node --env-file-if-exists=.env.live --import tsx src/external/github-release-server.ts",
+    "start:github-signal": "node --env-file-if-exists=.env.live --import tsx src/signal/github-signal-main.ts",
     "start": "node --env-file-if-exists=.env dist/main.js",
     "ledger:archive": "node --env-file-if-exists=.env dist/service/archive-release-ledger.js",
     "check:config": "tsc -p tsconfig.json && node --env-file-if-exists=.env dist/service/check-config-cli.js"

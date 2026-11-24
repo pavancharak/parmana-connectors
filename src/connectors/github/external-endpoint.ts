@@ -1,10 +1,5 @@
 import { ConnectorError, type ConnectorResponse } from "../../connector-contract.js";
-import {
-  createGitHubConnector,
-  GITHUB_COMMENT_CAPABILITY,
-  GITHUB_PR_FETCH_CAPABILITY,
-  GITHUB_PR_MERGE_CAPABILITY,
-} from "./github-connector.js";
+import { createGitHubConnector, GITHUB_PR_MERGE_CAPABILITY } from "./github-connector.js";
 /**
  * The release as this endpoint reads it. The verifier is passed in, so this
  * folder imports nothing from @parmana/sdk. The wiring that supplies
@@ -42,22 +37,20 @@ export type VerifyRelease = (
  * holds. Parmana's public key and the endpoint's registered URL come from the
  * operator.
  *
- * All three GitHub capabilities are served: `github:pr-fetch`, `github:pr-merge`
- * and `github:comment`. Parmana releases a write only after its approvals, and
- * the release carries them, so the endpoint does not check approvals again. A
- * release for any other capability is refused before GitHub is called. A release
+ * Only `github:pr-merge` is served. A merge is the one action this endpoint
+ * exists for: an AI agent proposes it, and a signed human approval for the exact
+ * pull request and head commit authorizes it. Parmana releases only after that
+ * approval, and the release carries it, so the endpoint does not check approvals
+ * again. Any other capability, including reads and comments, is refused before
+ * GitHub is called. A release
  * already answered is answered with the first answer, never acted on twice.
  *
  * The first answers are kept in memory by default. A restart forgets them, so
  * production needs a durable store passed in as `answers`.
  */
 
-/** The capabilities this endpoint serves: the three GitHub capabilities. */
-export const GITHUB_ENDPOINT_CAPABILITIES: ReadonlySet<string> = new Set([
-  GITHUB_PR_FETCH_CAPABILITY,
-  GITHUB_PR_MERGE_CAPABILITY,
-  GITHUB_COMMENT_CAPABILITY,
-]);
+/** The capabilities this endpoint serves: merge only. */
+export const GITHUB_ENDPOINT_CAPABILITIES: ReadonlySet<string> = new Set([GITHUB_PR_MERGE_CAPABILITY]);
 
 export interface GitHubReleaseEndpointOptions {
   /** Checks the signed body. Pass verifyParmanaRelease from @parmana/sdk. */

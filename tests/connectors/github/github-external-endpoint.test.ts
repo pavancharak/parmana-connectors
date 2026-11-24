@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { createGitHubReleaseEndpoint } from "../../../src/connectors/github/external-endpoint.js";
 
-const AUDIENCE = "https://github-connector.example.test/release";
+const AUDIENCE = "https://github-endpoint.example.test/release";
 const KEY_ID = "default";
 const CREDENTIAL = `424242:99887766:${Buffer.from(
   generateKeyPairSync("rsa", { modulusLength: 2048 }).privateKey.export({ type: "pkcs8", format: "pem" }).toString(),
@@ -13,6 +13,7 @@ const CREDENTIAL = `424242:99887766:${Buffer.from(
 ).toString("base64")}`;
 const NOW = new Date("2026-11-24T12:00:00.000Z");
 const SHA = "a".repeat(40);
+const MERGE_PATH = "/repos/acme/payments/pulls/17/merge";
 
 const parmana = generateKeyPairSync("ed25519");
 const PUBLIC_PEM = parmana.publicKey.export({ type: "spki", format: "pem" }).toString();
@@ -22,7 +23,7 @@ interface Sent {
   readonly path: string;
 }
 
-function fakeGitHub(options: { pullStatus?: number } = {}) {
+function fakeGitHub(options: { mergeStatus?: number; mergeBody?: unknown } = {}) {
   const sent: Sent[] = [];
   const doFetch = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(String(input));
@@ -30,15 +31,9 @@ function fakeGitHub(options: { pullStatus?: number } = {}) {
     if (url.pathname.endsWith("/access_tokens")) {
       return new Response(JSON.stringify({ token: "fake-installation-token" }), { status: 201 });
     }
-    if (url.pathname === "/repos/acme/payments/pulls/17" && init?.method === "GET") {
-      const body = { number: 17, mergeable: true, merged_at: null, head: { sha: SHA }, base: { ref: "main" } };
-      return new Response(JSON.stringify(body), { status: options.pullStatus ?? 200 });
-    }
-    if (url.pathname === "/repos/acme/payments/pulls/17/merge" && init?.method === "PUT") {
-      return new Response(JSON.stringify({ merged: true, sha: SHA }), { status: 200 });
-    }
-    if (url.pathname === "/repos/acme/payments/issues/17/comments" && init?.method === "POST") {
-      return new Response(JSON.stringify({ id: 555, html_url: "https://github.com/acme/payments/pull/17#issuecomment-555" }), { status: 201 });
+    if (url.pathname === MERGE_PATH && init?.method === "PUT") {
+      const body = options.mergeBody ?? { merged: true, sha: SHA };
+      return new Response(JSON.stringify(body), { status: options.mergeStatus ?? 200 });
     }
     return new Response("{}", { status: 404 });
   }) as unknown as typeof fetch;
@@ -50,12 +45,12 @@ function release(overrides: Record<string, unknown> = {}) {
     version: 1,
     connectorId: "github",
     audience: AUDIENCE,
-    businessTransactionId: "btx-github-1",
-    authorizationId: "auth-github-1",
-    capability: "github:pr-fetch",
+    businessTransactionId: "btx-merge-1",
+    authorizationId: "auth-merge-1",
+    capability: "github:pr-merge",
     target: "acme/payments#17",
-    parameters: {},
-    policy: { name: "github-pr-read", version: "1.1.0" },
+    parameters: { mergeMethod: "squash", expectedHeadSha: SHA },
+    policy: { name: "github-pr-approval", version: "1.2.0" },
     approvedBy: [{ approverId: "approver-1", keyId: "approver-key-1", approvalId: "approval-1" }],
     issuedAt: "2026-11-24T11:59:00.000Z",
     expiresAt: "2026-11-24T12:05:00.000Z",
@@ -85,14 +80,15 @@ function endpoint(fake = fakeGitHub(), answers = new Map<string, Record<string, 
   };
 }
 
-describe("GitHub release endpoint: a valid release", () => {
-  it("acts with github:pr-fetch and answers with the real pull request fields", async () => {
+describe("merge endpoint: a valid merge release", () => {
+  it("merges the pull request with the approved method and head SHA", async () => {
     const { handle, fake } = endpoint();
     const answer = await handle(signed(release()));
 
     expect(answer.status).toBe(200);
-    expect(answer.body).toMatchObject({ businessTransactionId: "btx-github-1", success: true, result: { headSha: SHA, baseRef: "main" } });
-    expect(fake.sent.map((call) => `${call.method} ${call.path}`)).toContain("GET /repos/acme/payments/pulls/17");
+    expect(answer.body).toMatchObject({ success: true, result: { merged: true, sha: SHA } });
+    const merge = fake.sent.find((call) => call.method === "PUT");
+    expect(merge?.path).toBe(MERGE_PATH);
   });
 
   it("never returns the GitHub App credential or the installation token", async () => {
@@ -104,8 +100,8 @@ describe("GitHub release endpoint: a valid release", () => {
   });
 });
 
-describe("GitHub release endpoint: refusals before any GitHub call", () => {
-  it("refuses a body whose signature does not verify, and calls GitHub zero times", async () => {
+describe("merge endpoint: refusals before any GitHub call", () => {
+  it("refuses a body whose signature does not verify", async () => {
     const other = generateKeyPairSync("ed25519");
     const { handle, fake } = endpoint();
     const answer = await handle(signed(release(), other.privateKey));
@@ -130,12 +126,20 @@ describe("GitHub release endpoint: refusals before any GitHub call", () => {
     expect(fake.sent).toHaveLength(0);
   });
 
-  it("refuses a capability this endpoint does not serve, and calls GitHub zero times", async () => {
+  it.each(["github:pr-fetch", "github:comment", "github:pr-delete"])("refuses %s, which this endpoint does not serve, and calls GitHub zero times", async (capability) => {
     const { handle, fake } = endpoint();
-    const answer = await handle(signed(release({ capability: "github:pr-delete", parameters: {} })));
+    const answer = await handle(signed(release({ capability, parameters: {} })));
 
     expect(answer.status).toBe(403);
     expect(fake.sent).toHaveLength(0);
+  });
+
+  it("refuses a merge with a parameter other than mergeMethod and expectedHeadSha", async () => {
+    const { handle, fake } = endpoint();
+    const answer = await handle(signed(release({ businessTransactionId: "btx-merge-bad", parameters: { mergeMethod: "merge", body: "x" } })));
+
+    expect(answer.body).toMatchObject({ success: false, errorCode: "invalid_input" });
+    expect(fake.sent.some((call) => call.method === "PUT")).toBe(false);
   });
 
   it("refuses a body that is not { release, signature }", async () => {
@@ -144,44 +148,8 @@ describe("GitHub release endpoint: refusals before any GitHub call", () => {
   });
 });
 
-describe("GitHub release endpoint: the two writes", () => {
-  it("merges with the approved method and head SHA, and answers with merged true", async () => {
-    const { handle, fake } = endpoint();
-    const answer = await handle(
-      signed(release({ businessTransactionId: "btx-merge-1", capability: "github:pr-merge", parameters: { mergeMethod: "squash", expectedHeadSha: SHA } })),
-    );
-
-    expect(answer.status).toBe(200);
-    expect(answer.body).toMatchObject({ success: true, result: { merged: true, sha: SHA } });
-    const merge = fake.sent.find((call) => call.method === "PUT");
-    expect(merge?.path).toBe("/repos/acme/payments/pulls/17/merge");
-  });
-
-  it("posts a comment with the transaction marker, and answers with the comment id", async () => {
-    const { handle, fake } = endpoint();
-    const answer = await handle(
-      signed(release({ businessTransactionId: "btx-comment-1", capability: "github:comment", parameters: { body: "Approved and released." } })),
-    );
-
-    expect(answer.status).toBe(200);
-    expect(answer.body).toMatchObject({ success: true, result: { commentId: 555 } });
-    expect(fake.sent.some((call) => call.method === "POST" && call.path.endsWith("/comments"))).toBe(true);
-  });
-
-  it("refuses a merge with an unknown parameter, and calls GitHub zero times", async () => {
-    const { handle, fake } = endpoint();
-    const answer = await handle(
-      signed(release({ businessTransactionId: "btx-merge-bad", capability: "github:pr-merge", parameters: { mergeMethod: "merge", body: "x" } })),
-    );
-
-    // The connector refuses the parameter, so the answer is a recorded failure, not a GitHub call.
-    expect(answer.body).toMatchObject({ success: false, errorCode: "invalid_input" });
-    expect(fake.sent.some((call) => call.method === "PUT")).toBe(false);
-  });
-});
-
-describe("GitHub release endpoint: a replay", () => {
-  it("answers a repeated release with the first answer, and does not call GitHub again", async () => {
+describe("merge endpoint: a replay", () => {
+  it("answers a repeated release with the first answer, and does not merge again", async () => {
     const { handle, fake } = endpoint();
     const body = signed(release());
 
@@ -190,11 +158,11 @@ describe("GitHub release endpoint: a replay", () => {
 
     expect(second.status).toBe(200);
     expect(second.body).toEqual(first.body);
-    expect(fake.sent.filter((call) => call.path === "/repos/acme/payments/pulls/17")).toHaveLength(1);
+    expect(fake.sent.filter((call) => call.method === "PUT")).toHaveLength(1);
   });
 
-  it("records a failed GitHub call as the first answer, so a replay cannot act again", async () => {
-    const { handle, fake } = endpoint(fakeGitHub({ pullStatus: 404 }));
+  it("records a failed merge as the first answer, so a replay cannot merge again", async () => {
+    const { handle, fake } = endpoint(fakeGitHub({ mergeStatus: 409, mergeBody: { message: "Head branch was modified" } }));
     const body = signed(release());
 
     const first = await handle(body);
@@ -202,6 +170,6 @@ describe("GitHub release endpoint: a replay", () => {
 
     expect(first.body).toMatchObject({ success: false, errorCode: "upstream_error" });
     expect(second.body).toEqual(first.body);
-    expect(fake.sent.filter((call) => call.path === "/repos/acme/payments/pulls/17")).toHaveLength(1);
+    expect(fake.sent.filter((call) => call.method === "PUT")).toHaveLength(1);
   });
 });
