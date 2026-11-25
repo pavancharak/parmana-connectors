@@ -20,5 +20,5 @@ This folder holds what is needed to bring one partner's refund flow under Parman
 
 - Partner's refund route address and owner.
 - Agreement to move the Razorpay key to Parmana.
-- Confirm the gateway public key the partner uses to verify decisions (Ed25519 when generated with the documented script). Check it against the key Parmana publishes before go-live.
+- Obtain Parmana's Ed25519 gateway public key and ML-DSA-65 public key for verifying decisions. Check both against the keys Parmana publishes before go-live.
 - The grant limit for the partner (path `parameters.amount`, in paise). Confirm it matches the grant set up for them.
