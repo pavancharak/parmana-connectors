@@ -61,6 +61,16 @@ export async function askParmana({ capability, target, amount }) {
   }
 }
 
+// Redeem an approved decision once, before acting on it. A second redemption is refused.
+export async function redeemDecision(decisionId) {
+  const response = await fetch(`${PARMANA_URL}/v1/inbound/checks/${decisionId}/redeem`, {
+    method: "POST",
+    redirect: "error",
+    headers: { authorization: `Bearer ${PARTNER_TOKEN}` },
+  });
+  return response.status === 200;
+}
+
 // Decide whether to act on a decision. Returns { ok, reason }.
 export function checkDecision(decision, now = new Date()) {
   if (decision.outcome !== "approved") {
@@ -107,6 +117,11 @@ export async function refundIfApproved({ paymentId, amount }) {
 
   const check = checkDecision(answer.decision);
   if (!check.ok) return { refunded: false, reason: check.reason };
+
+  // Redeem first: a decision covers one action only.
+  if (!(await redeemDecision(answer.decision.decisionId))) {
+    return { refunded: false, reason: "not_redeemed" };
+  }
 
   // PLACEHOLDER: hand the approved decision to Parmana's connector path.
   // Do not call Razorpay directly from here.

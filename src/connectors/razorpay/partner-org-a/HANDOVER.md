@@ -13,8 +13,9 @@ Today a refund can be made by calling Razorpay directly with a key your system h
 1. **Ask Parmana for a decision before each refund.** Call `POST /v1/inbound/checks` with `capability: "payments:refund"`, your audience, the payment id as `target`, and the amount in paise as `parameters.amount` (100 = Rs 1). The example in `partner-refund-check.example.mjs` shows the call.
 2. **Refuse anything that is not approved.** This includes errors, timeouts and network failures.
 3. **Check both signatures and the expiry** before acting on a decision. Every decision carries an Ed25519 signature (`signature`) and an ML-DSA-65 post-quantum signature (`secondarySignature`), both over the same fields. A decision missing either one is refused. The example shows how.
-4. **Stop calling Razorpay directly** once Parmana's refund path is in place. This means retiring the Razorpay key you hold, after agreement with Parmana and Razorpay.
-5. **Tell us your refund route address and its owner**, so the no-bypass probe can test that direct calls are refused.
+4. **Redeem each approved decision once, before refunding.** Call `POST /v1/inbound/checks/{decisionId}/redeem`. A decision can be redeemed once, and a second redemption is refused. Each refund needs its own decision.
+5. **Stop calling Razorpay directly** once Parmana's refund path is in place. This means retiring the Razorpay key you hold, after agreement with Parmana and Razorpay.
+6. **Tell us your refund route address and its owner**, so the no-bypass probe can test that direct calls are refused.
 
 ## What Parmana will verify
 
