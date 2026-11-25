@@ -29,7 +29,7 @@ export function canonicalBytes(decision) {
 }
 
 // Ask Parmana. Any error, timeout or unexpected status is treated as "not approved".
-export async function askParmana({ capability, target, amountInr }) {
+export async function askParmana({ capability, target, amount }) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -45,7 +45,7 @@ export async function askParmana({ capability, target, amountInr }) {
         capability, // for example "payments:refund"
         audience: AUDIENCE,
         target, // the Razorpay payment id, for example pay_XXXX
-        parameters: { amountInr }, // must match the grant limit path set for this partner
+        parameters: { amount }, // amount in paise (100 = Rs 1); the grant limit path "parameters.amount" must match
       }),
     });
     if (response.status !== 201) {
@@ -84,11 +84,11 @@ export function checkDecision(decision, now = new Date()) {
 
 // Example use. The refund step is a placeholder: it must call Parmana's Razorpay connector,
 // because the partner must not hold a Razorpay key of their own.
-export async function refundIfApproved({ paymentId, amountInr }) {
+export async function refundIfApproved({ paymentId, amount }) {
   const answer = await askParmana({
     capability: "payments:refund",
     target: paymentId,
-    amountInr,
+    amount,
   });
   if (!answer.approved) return { refunded: false, reason: answer.reason };
 
@@ -101,4 +101,5 @@ export async function refundIfApproved({ paymentId, amountInr }) {
 }
 
 // Environment variables:
-//   PARMANA_URL, PARMANA_PARTNER_TOKEN, PARMANA_AUDIENCE, PARMANA_PUBLIC_KEY_PEM, PARMANA_TIMEOUT_MS (optional)
+//   PARMANA_URL, PARMANA_PARTNER_TOKEN, PARMANA_AUDIENCE, PARMANA_PUBLIC_KEY_PEM (the gateway public key, Ed25519),
+//   PARMANA_TIMEOUT_MS (optional)
