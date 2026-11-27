@@ -4,7 +4,7 @@ This is the GitHub connector run as an external endpoint (ADR-0013). Parmana rel
 
 ## GitHub endpoint
 
-`external-endpoint.ts` serves **all three GitHub capabilities**: `github:pr-fetch`, `github:pr-merge` and `github:comment`. Any other capability is refused with 403 before GitHub is called. Parmana releases a write only after its approvals, and the release carries them, so the endpoint does not check approvals again.
+`external-endpoint.ts` serves **only `github:pr-merge`**. Reads (`github:pr-fetch`), comments (`github:comment`) and any other capability are refused with 403 before GitHub is called. The endpoint is kept to the one action that needs a human approval; see commit `0a44161`. Parmana releases a write only after its approvals, and the release carries them, so the endpoint does not check approvals again.
 
 | Status | When |
 | --- | --- |
@@ -41,5 +41,4 @@ The HTTP server was also run locally. A GET returned 405, a bad signature return
 - **A durable answer store.** The first answers are in memory, so a restart forgets them and a replay after a restart could act again. Production needs a database table keyed by `businessTransactionId`, passed in as `answers`.
 - **Deployment.** The endpoint is not deployed. It needs a public HTTPS host, which means a new Vercel project or another host.
 - **Registration.** Parmana has to be told about the endpoint through a registration change, which a checker approves. That approval needs the checker's own key on the checker's machine.
-- **Policies.** `github:pr-fetch` is not bound to a policy in production yet. Parmana won't release to the endpoint until it is.
-- **Policies for the writes.** `github:pr-merge` maps to `github-pr-approval` 1.1.0, and `github:comment` has no policy yet. Parmana won't release a write until its policy is bound.
+- **Policy.** `github:pr-merge` maps to `github-pr-approval` 1.1.0. Parmana won't release a merge until that policy is bound. The endpoint does not serve `github:pr-fetch` or `github:comment`, so their policies do not affect it.

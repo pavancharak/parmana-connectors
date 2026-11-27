@@ -36,6 +36,13 @@ The functions are `api/execute.ts` (served at `/api/execute`) and `api/health.ts
 | `ZOHO_ACCESS_TOKEN` | Secret | `<OAUTH_ACCESS_TOKEN>` (placeholder). Needed only when `PARMANA_CONNECTOR=zoho`. No spaces | Zoho API Console, an OAuth access token with only the Zoho Books invoice scopes the connector needs. Use a test organization until live use is approved. See [the Zoho README](src/connectors/zoho/README.md) |
 | `ZOHO_ORGANIZATION_ID` | Secret | `<DIGITS>` (placeholder). Needed only when `PARMANA_CONNECTOR=zoho`. Digits only | Zoho Books, the organization's settings. The service refuses to start without it |
 | `PAYTM_MERCHANT_CREDENTIAL` | Secret | `<MERCHANT_ID>:<MERCHANT_KEY>` (placeholder). Needed only when `PARMANA_CONNECTOR=paytm`. Staging credentials only | Paytm Dashboard, staging. Use staging only until production use is approved |
+| `PARMANA_SIGNAL_AUDIENCE` | Secret | `https://parmana-connectors.vercel.app/api/refund-payment` (placeholder). Needed by `/api/refund-payment` | The URL that parmana-core registers for this signal source. A query for any other audience is refused |
+| `PARMANA_SIGNAL_PARMANA_PUBLIC_KEY_PEM` | Secret | `-----BEGIN PUBLIC KEY-----` PEM (placeholder). Needed by `/api/refund-payment` | Parmana's signing public key, confirmed through a second channel. Used to verify each query |
+| `PARMANA_SIGNAL_PARMANA_KEY_ID` | Optional | `default` (the default when unset) | The key id of Parmana's signing key, if it is not `default` |
+| `PARMANA_SIGNAL_SIGNING_KEY_PEM` | Secret | `-----BEGIN PRIVATE KEY-----` PEM (placeholder). Needed by `/api/refund-payment` | This service's Ed25519 private key, which signs each answer. Generate it locally and never commit it |
+| `PARMANA_SIGNAL_SIGNING_KEY_ID` | Optional | `signal-1` (the default when unset) | The key id of this service's signing key, if it is not `signal-1` |
+| `PARMANA_SIGNAL_SOURCE_NAME` | Optional | `razorpay-payments` (the default when unset) | The source name the service answers as. Must match what parmana-core expects for this signal source |
+| `RAZORPAY_CORE_READ_KEY` | Secret | `rzp_test_<KEY_ID>:<KEY_SECRET>` (placeholder). Needed by `/api/refund-payment` | Razorpay Dashboard, test mode, a key with read access to payments. A live key (`rzp_live_`) is refused unless `PARMANA_ALLOW_LIVE_KEYS=true` |
 | `RAZORPAY_KEY_PAIR` | Secret | `rzp_test_<KEY_ID>:<KEY_SECRET>` (placeholder) | Razorpay Dashboard, test mode, API Keys. Use a test key only until live use is approved |
 
 Leave these unset:
@@ -43,6 +50,21 @@ Leave these unset:
 - `PARMANA_PUBLIC_KEY_FILE`. It must not be set together with `PARMANA_PUBLIC_KEY`.
 - `PARMANA_CONNECTOR_TIMEOUT_MS`. The default of 10000 ms applies.
 - `PARMANA_SERVICE_PORT` and `PARMANA_SERVICE_HOST`. Vercel does not use them.
+
+## GitHub signal service (a separate process, not Vercel)
+
+The GitHub signal source answers parmana-core's questions about pull requests. It runs as its own Node process, started with `npm run start:github-signal`, and listens on `PORT` (default `8080`). It accepts any path, but only `POST` with `content-type: application/json`.
+
+It reads the same `PARMANA_SIGNAL_*` names as the Razorpay signal, and it runs in its own deployment with its own values. Its own settings are:
+
+| Variable | Kind | What it is |
+| --- | --- | --- |
+| `GITHUB_APP_CREDENTIAL` | Secret | `<APP_ID>:<INSTALLATION_ID>:<BASE64_PEM>`, the GitHub App's id, installation id and private key. The service refuses to start without it |
+| `GITHUB_SIGNAL_ALLOWED_REPOSITORIES` | Required | Comma-separated `owner/repo` list. Only these repositories can be queried. The service refuses to start without it |
+| `GITHUB_SIGNAL_SOURCE_NAME` | Optional | `github-pull-requests` (the default when unset). The source name it answers as |
+| `PORT` | Optional | `8080` (the default when unset) |
+
+The `PARMANA_SIGNAL_*` variables in the table above apply to it too. Its `PARMANA_SIGNAL_AUDIENCE` must be an `https://` URL.
 
 ## Check the configuration before deploying
 

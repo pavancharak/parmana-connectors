@@ -15,7 +15,7 @@ There are two kinds of component. Pick one before you start.
 
 Most new vendors need an action connector. A signal source is needed only when a policy must check a fact in that vendor's system.
 
-**Limit today:** the signal service in `src/signal/service.ts` calls the Razorpay signal directly. It does not yet dispatch to a second signal by claim. A second signal source therefore also needs a change to that dispatch, which is a separate piece of work. Raise it with the owner before you start.
+**How signal sources run today:** each one is its own service. The Razorpay signal is `src/signal/service.ts`, served at `/api/refund-payment` on Vercel. The GitHub signal is `src/signal/github-signal-main.ts`, a separate process started with `npm run start:github-signal`. A new signal source needs its own service, its own settings and its own deployment, and a policy that names it. Raise it with the owner before you start.
 
 ## 1. Name things
 

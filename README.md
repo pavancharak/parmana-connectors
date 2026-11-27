@@ -33,7 +33,7 @@ It runs the code that performs approved actions in institutional systems. Each v
 | Razorpay | `payments:refund` | Razorpay test mode only |
 | Paytm | `paytm:refund` | Paytm staging only |
 | Slack | `slack:post-message` | Not run against a live workspace yet |
-| GitHub | `github:pr-fetch`, `github:pr-merge` | GitHub App; not run against a live app yet |
+| GitHub | `github:pr-fetch`, `github:pr-merge`, `github:comment` | GitHub App; live tests passed against a test repository on 24 November 2026 (see its [LIVE-RUN record](src/connectors/github/LIVE-RUN-2026-11-24.md)). The external endpoint serves only `github:pr-merge` |
 | HubSpot | `hubspot:deal-fetch`, `hubspot:deal-update` | Private App; not run against a live portal yet |
 | Zerodha | `zerodha:place-order` | Paper only; no live mode in this repository |
 | Zoho Books | `zoho:invoice-fetch`, `zoho:invoice-create` | India data centre; not run against a live organization yet. See [the Zoho README](src/connectors/zoho/README.md) |
