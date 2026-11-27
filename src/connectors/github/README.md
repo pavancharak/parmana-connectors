@@ -164,4 +164,4 @@ Results of the most recent live run are in [LIVE-RUN-2026-11-24.md](LIVE-RUN-202
 
 ## External endpoint
 
-The GitHub connector can run as an external endpoint that Parmana releases signed requests to, for all three capabilities: `github:pr-fetch`, `github:pr-merge` and `github:comment`. See [EXTERNAL.md](EXTERNAL.md).
+The GitHub connector can run as an external endpoint that Parmana releases signed requests to. The endpoint serves only `github:pr-merge`; reads and comments are refused before GitHub is called. See [EXTERNAL.md](EXTERNAL.md).

@@ -15,6 +15,17 @@ On Vercel the `/api` prefix is removed before the request is handled, so the sam
 
 `GET /health` (and `/api/health` on Vercel) returns `200` with `{"status":"UP"}`. It does not check the database or the institutional system.
 
+## The signal route: `POST /api/refund-payment`
+
+On Vercel, `api/refund-payment.ts` serves the Razorpay payment signal service that parmana-core queries. It answers whether a payment is refundable, and it does not refund anything. Its configuration is in [SETUP.md](../SETUP.md) (`PARMANA_SIGNAL_*` and `RAZORPAY_CORE_READ_KEY`).
+
+- **Method.** Only `POST`. Any other method returns `405`.
+- **Content type.** `application/json`. Any other content type returns `415`.
+- **Body.** A signed query from parmana-core, at most 16 KB. A body that is not JSON returns `400`.
+- **Refusals.** A query whose signature, audience or source does not check returns `403` with the reason. The reason is logged. The query and the keys are never logged.
+- **Answers.** A valid query gets the signed answer.
+- **Configuration.** It is read once per warm instance. A missing setting returns `500` with no detail, so the function never runs half-configured.
+
 ## The release
 
 parmana-core POSTs a JSON body with two keys, `release` and `signature`:

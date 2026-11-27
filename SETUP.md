@@ -36,6 +36,13 @@ The functions are `api/execute.ts` (served at `/api/execute`) and `api/health.ts
 | `ZOHO_ACCESS_TOKEN` | Secret | `<OAUTH_ACCESS_TOKEN>` (placeholder). Needed only when `PARMANA_CONNECTOR=zoho`. No spaces | Zoho API Console, an OAuth access token with only the Zoho Books invoice scopes the connector needs. Use a test organization until live use is approved. See [the Zoho README](src/connectors/zoho/README.md) |
 | `ZOHO_ORGANIZATION_ID` | Secret | `<DIGITS>` (placeholder). Needed only when `PARMANA_CONNECTOR=zoho`. Digits only | Zoho Books, the organization's settings. The service refuses to start without it |
 | `PAYTM_MERCHANT_CREDENTIAL` | Secret | `<MERCHANT_ID>:<MERCHANT_KEY>` (placeholder). Needed only when `PARMANA_CONNECTOR=paytm`. Staging credentials only | Paytm Dashboard, staging. Use staging only until production use is approved |
+| `PARMANA_SIGNAL_AUDIENCE` | Secret | `https://parmana-connectors.vercel.app/api/refund-payment` (placeholder). Needed by `/api/refund-payment` | The URL that parmana-core registers for this signal source. A query for any other audience is refused |
+| `PARMANA_SIGNAL_PARMANA_PUBLIC_KEY_PEM` | Secret | `-----BEGIN PUBLIC KEY-----` PEM (placeholder). Needed by `/api/refund-payment` | Parmana's signing public key, confirmed through a second channel. Used to verify each query |
+| `PARMANA_SIGNAL_PARMANA_KEY_ID` | Optional | `default` (the default when unset) | The key id of Parmana's signing key, if it is not `default` |
+| `PARMANA_SIGNAL_SIGNING_KEY_PEM` | Secret | `-----BEGIN PRIVATE KEY-----` PEM (placeholder). Needed by `/api/refund-payment` | This service's Ed25519 private key, which signs each answer. Generate it locally and never commit it |
+| `PARMANA_SIGNAL_SIGNING_KEY_ID` | Optional | `signal-1` (the default when unset) | The key id of this service's signing key, if it is not `signal-1` |
+| `PARMANA_SIGNAL_SOURCE_NAME` | Optional | `razorpay-payments` (the default when unset) | The source name the service answers as. Must match what parmana-core expects for this signal source |
+| `RAZORPAY_CORE_READ_KEY` | Secret | `rzp_test_<KEY_ID>:<KEY_SECRET>` (placeholder). Needed by `/api/refund-payment` | Razorpay Dashboard, test mode, a key with read access to payments. A live key (`rzp_live_`) is refused unless `PARMANA_ALLOW_LIVE_KEYS=true` |
 | `RAZORPAY_KEY_PAIR` | Secret | `rzp_test_<KEY_ID>:<KEY_SECRET>` (placeholder) | Razorpay Dashboard, test mode, API Keys. Use a test key only until live use is approved |
 
 Leave these unset:
