@@ -26,6 +26,18 @@ On Vercel, `api/refund-payment.ts` serves the Razorpay payment signal service th
 - **Answers.** A valid query gets the signed answer.
 - **Configuration.** It is read once per warm instance. A missing setting returns `500` with no detail, so the function never runs half-configured.
 
+## The GitHub signal route
+
+The GitHub signal service is a separate process, started with `npm run start:github-signal` (see [SETUP.md](../SETUP.md)). It answers signed queries about pull requests from parmana-core, and it does not act on GitHub.
+
+- **Path.** Any path. The service does not route by path.
+- **Method.** Only `POST`. Any other method returns `405`.
+- **Content type.** `application/json`. Any other content type returns `415`.
+- **Body.** A signed query from parmana-core, at most 16 KB. A body that is too large returns `413`, and a body that is not JSON returns `400`.
+- **Refusals.** A query whose signature, audience or source does not check returns `403` with the reason.
+- **Answers.** A valid query gets the signed answer, status `200`. If GitHub cannot be read, the service returns `503`.
+- **Repositories.** Only repositories named in `GITHUB_SIGNAL_ALLOWED_REPOSITORIES` can be queried.
+
 ## The release
 
 parmana-core POSTs a JSON body with two keys, `release` and `signature`:

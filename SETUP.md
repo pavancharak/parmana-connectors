@@ -51,6 +51,21 @@ Leave these unset:
 - `PARMANA_CONNECTOR_TIMEOUT_MS`. The default of 10000 ms applies.
 - `PARMANA_SERVICE_PORT` and `PARMANA_SERVICE_HOST`. Vercel does not use them.
 
+## GitHub signal service (a separate process, not Vercel)
+
+The GitHub signal source answers parmana-core's questions about pull requests. It runs as its own Node process, started with `npm run start:github-signal`, and listens on `PORT` (default `8080`). It accepts any path, but only `POST` with `content-type: application/json`.
+
+It reads the same `PARMANA_SIGNAL_*` names as the Razorpay signal, and it runs in its own deployment with its own values. Its own settings are:
+
+| Variable | Kind | What it is |
+| --- | --- | --- |
+| `GITHUB_APP_CREDENTIAL` | Secret | `<APP_ID>:<INSTALLATION_ID>:<BASE64_PEM>`, the GitHub App's id, installation id and private key. The service refuses to start without it |
+| `GITHUB_SIGNAL_ALLOWED_REPOSITORIES` | Required | Comma-separated `owner/repo` list. Only these repositories can be queried. The service refuses to start without it |
+| `GITHUB_SIGNAL_SOURCE_NAME` | Optional | `github-pull-requests` (the default when unset). The source name it answers as |
+| `PORT` | Optional | `8080` (the default when unset) |
+
+The `PARMANA_SIGNAL_*` variables in the table above apply to it too. Its `PARMANA_SIGNAL_AUDIENCE` must be an `https://` URL.
+
 ## Check the configuration before deploying
 
 The function returns a generic `500 {"error":"service is not configured"}` when its settings fail to load. The reason is only in the Vercel function logs, as `service_not_configured`. To find the problem before a deploy, run the same loader locally with the values you plan to use:
